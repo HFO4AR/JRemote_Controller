@@ -66,3 +66,6 @@ CMakeFiles/
 # Makefiles (if used)
 Makefile
 makefile
+
+# Keystore files
+keystore/
