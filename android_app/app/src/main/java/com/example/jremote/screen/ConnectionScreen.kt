@@ -1,5 +1,7 @@
 package com.example.jremote.screen
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.annotation.OptIn
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
@@ -315,6 +317,7 @@ private fun TabButton(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun DeviceItem(
     device: BluetoothDevice,
     isSelected: Boolean,
