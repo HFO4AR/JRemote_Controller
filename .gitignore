@@ -1,0 +1,68 @@
+# IDE files and directories
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Build outputs
+build/
+*/build/
+*.apk
+*.aab
+*.aar
+
+# Gradle files
+.gradle/
+*/.gradle/
+gradle-app.setting
+
+# Local configuration files
+local.properties
+
+# Log files
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDEA
+.idea/
+.idea_modules/
+
+# Android Studio
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Sample code build files
+sample/**/build/
+sample/**/dist/
+
+# ESP32 Arduino build files
+sample/**/build/
+sample/**/sketchbook/
+
+# PlatformIO files (if used)
+.pio/
+.platformio/
+
+# CMake files (if used)
+CMakeCache.txt
+CMakeFiles/
+
+# Makefiles (if used)
+Makefile
+makefile
