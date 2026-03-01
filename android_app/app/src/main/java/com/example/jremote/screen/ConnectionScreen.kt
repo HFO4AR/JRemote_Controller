@@ -1,9 +1,5 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-
 package com.example.jremote.screen
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.annotation.OptIn
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
@@ -11,7 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -319,7 +316,6 @@ private fun TabButton(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun DeviceItem(
     device: BluetoothDevice,
     isSelected: Boolean,
@@ -331,10 +327,17 @@ private fun DeviceItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                enabled = !isConnecting,
-                onClick = onClick,
-                onLongClick = onLongClick
+            .then(
+                if (!isConnecting) {
+                    Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { onClick() },
+                            onLongPress = { onLongClick() }
+                        )
+                    }
+                } else {
+                    Modifier
+                }
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Color(0xFF2A3A4A) else Color(0xFF2A2A3A)

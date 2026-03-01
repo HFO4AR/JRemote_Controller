@@ -54,6 +54,8 @@ jobs:
 
     - name: Build with Gradle
       run: cd android_app && ./gradlew assembleRelease
+      env:
+        JREMOTE_KEY: ${{ secrets.JREMOTE_KEY }}
 
     - name: Upload Release APK
       uses: actions/upload-release-asset@v1
