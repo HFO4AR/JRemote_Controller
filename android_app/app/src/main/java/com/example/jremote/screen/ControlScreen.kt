@@ -70,6 +70,7 @@ import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.JoystickState
+import com.example.jremote.data.ToggleButtonLayout
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -87,6 +88,7 @@ fun ControlScreen(
     isInControlMode: Boolean,
     isEmergencyStopped: Boolean,
     showDebugPanel: Boolean,
+    toggleButtonLayout: ToggleButtonLayout,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -148,6 +150,7 @@ fun ControlScreen(
             isSending = isSending,
             isEmergencyStopped = isEmergencyStopped,
             showDebugPanel = showDebugPanel,
+            toggleButtonLayout = toggleButtonLayout,
             rssi = rssi,
             latency = latency,
             onLeftJoystickChange = onLeftJoystickChange,
@@ -439,6 +442,7 @@ private fun LandscapeControlScreen(
     isSending: Boolean,
     isEmergencyStopped: Boolean,
     showDebugPanel: Boolean,
+    toggleButtonLayout: ToggleButtonLayout,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -530,54 +534,17 @@ private fun LandscapeControlScreen(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
-                // 摇杆上方：4个切换按钮（2x2布局）L1-L4
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(bottom = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                // 摇杆上方：4个切换按钮 L1-L4
+                Box(
+                    modifier = Modifier.align(Alignment.TopCenter)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        buttonConfigs.getOrNull(6)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                        buttonConfigs.getOrNull(7)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        buttonConfigs.getOrNull(8)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                        buttonConfigs.getOrNull(9)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                    }
+                    ToggleButtonsLayout(
+                        buttonConfigs = buttonConfigs,
+                        buttonStates = buttonStates,
+                        startIndex = 6,
+                        layout = toggleButtonLayout,
+                        onButtonPressed = onButtonPressed
+                    )
                 }
 
                 // 摇杆周围环绕3个按钮（LX、LY、LZ）- 在圆上，间距相等，偏向屏幕中心
@@ -721,54 +688,17 @@ private fun LandscapeControlScreen(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
-                // 摇杆上方：4个切换按钮（2x2布局）R1-R4
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(bottom = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                // 摇杆上方：4个切换按钮 R1-R4
+                Box(
+                    modifier = Modifier.align(Alignment.TopCenter)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        buttonConfigs.getOrNull(10)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                        buttonConfigs.getOrNull(11)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        buttonConfigs.getOrNull(12)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                        buttonConfigs.getOrNull(13)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 40.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                            )
-                        }
-                    }
+                    ToggleButtonsLayout(
+                        buttonConfigs = buttonConfigs,
+                        buttonStates = buttonStates,
+                        startIndex = 10,
+                        layout = toggleButtonLayout,
+                        onButtonPressed = onButtonPressed
+                    )
                 }
 
                 // 摇杆周围环绕3个按钮（RX、RY、RZ）- 在圆上，间距相等，偏向屏幕中心
@@ -828,6 +758,84 @@ private fun LandscapeControlScreen(
                         .align(Alignment.BottomCenter)
                         .padding(top = 4.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToggleButtonsLayout(
+    buttonConfigs: List<ButtonConfig>,
+    buttonStates: Map<Int, Boolean>,
+    startIndex: Int,
+    layout: ToggleButtonLayout,
+    onButtonPressed: (Int, Boolean) -> Unit
+) {
+    when (layout) {
+        ToggleButtonLayout.HORIZONTAL -> {
+            Row(
+                modifier = Modifier.padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                for (i in startIndex until startIndex + 4) {
+                    buttonConfigs.getOrNull(i)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 50.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                        )
+                    }
+                }
+            }
+        }
+        ToggleButtonLayout.GRID_2X2 -> {
+            Column(
+                modifier = Modifier.padding(bottom = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    buttonConfigs.getOrNull(startIndex)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 40.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                        )
+                    }
+                    buttonConfigs.getOrNull(startIndex + 1)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 40.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    buttonConfigs.getOrNull(startIndex + 2)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 40.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                        )
+                    }
+                    buttonConfigs.getOrNull(startIndex + 3)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 40.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                        )
+                    }
+                }
             }
         }
     }

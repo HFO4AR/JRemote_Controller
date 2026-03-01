@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jremote.data.AppSettings
 import com.example.jremote.data.ButtonConfig
+import com.example.jremote.data.ToggleButtonLayout
 
 @Composable
 fun SettingsScreen(
@@ -163,6 +164,38 @@ fun SettingsScreen(
                             checked = settings.hapticFeedback,
                             onCheckedChange = { onUpdateSettings(settings.copy(hapticFeedback = it)) }
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "切换按钮布局",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onUpdateSettings(settings.copy(toggleButtonLayout = ToggleButtonLayout.HORIZONTAL)) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.HORIZONTAL) 
+                                        Color(0xFF4A90D9) else Color(0xFF3A3A4A)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("一字排开", fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { onUpdateSettings(settings.copy(toggleButtonLayout = ToggleButtonLayout.GRID_2X2)) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.GRID_2X2) 
+                                        Color(0xFF4A90D9) else Color(0xFF3A3A4A)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("2x2 网格", fontSize = 12.sp)
+                            }
+                        }
                     }
                 }
             }

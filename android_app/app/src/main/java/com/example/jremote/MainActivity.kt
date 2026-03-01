@@ -76,6 +76,7 @@ fun AppNavigation(
                 isInControlMode = isInControlMode,
                 isEmergencyStopped = isEmergencyStopped,
                 showDebugPanel = settings.showDebugPanel,
+                toggleButtonLayout = settings.toggleButtonLayout,
                 rssi = rssi,
                 latency = latency,
                 onLeftJoystickChange = { viewModel.updateLeftJoystick(it) },

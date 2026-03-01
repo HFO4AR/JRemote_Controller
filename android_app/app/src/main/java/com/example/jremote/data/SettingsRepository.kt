@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -20,6 +21,7 @@ class SettingsRepository(private val context: Context) {
         val SHOW_DEBUG_PANEL = booleanPreferencesKey("show_debug_panel")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         val AUTO_RECONNECT = booleanPreferencesKey("auto_reconnect")
+        val TOGGLE_BUTTON_LAYOUT = stringPreferencesKey("toggle_button_layout")
     }
     
     private object ButtonKeys {
@@ -32,7 +34,12 @@ class SettingsRepository(private val context: Context) {
             sendIntervalMs = prefs[Keys.SEND_INTERVAL_MS] ?: 20L,
             showDebugPanel = prefs[Keys.SHOW_DEBUG_PANEL] ?: true,
             hapticFeedback = prefs[Keys.HAPTIC_FEEDBACK] ?: true,
-            autoReconnect = prefs[Keys.AUTO_RECONNECT] ?: false
+            autoReconnect = prefs[Keys.AUTO_RECONNECT] ?: false,
+            toggleButtonLayout = try {
+                ToggleButtonLayout.valueOf(prefs[Keys.TOGGLE_BUTTON_LAYOUT] ?: "HORIZONTAL")
+            } catch (e: IllegalArgumentException) {
+                ToggleButtonLayout.HORIZONTAL
+            }
         )
     }
     
@@ -42,6 +49,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SHOW_DEBUG_PANEL] = settings.showDebugPanel
             prefs[Keys.HAPTIC_FEEDBACK] = settings.hapticFeedback
             prefs[Keys.AUTO_RECONNECT] = settings.autoReconnect
+            prefs[Keys.TOGGLE_BUTTON_LAYOUT] = settings.toggleButtonLayout.name
         }
     }
     
