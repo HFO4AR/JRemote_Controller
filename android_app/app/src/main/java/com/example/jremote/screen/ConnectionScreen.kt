@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.jremote.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -317,7 +319,6 @@ private fun TabButton(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun DeviceItem(
     device: BluetoothDevice,
     isSelected: Boolean,
