@@ -36,16 +36,20 @@ fun ControlButton(
     val haptic = LocalHapticFeedback.current
 
     val backgroundColor = when {
+        !config.isEnabled -> Color(0xFF2A2A3A).copy(alpha = 0.3f)
         isPressed -> Color(0xFF4A90D9)
         isToggled -> Color(0xFF2E7D32)
         else -> Color(0xFF3A3A4A)
     }
 
     val borderColor = when {
+        !config.isEnabled -> Color(0xFF3A3A4A).copy(alpha = 0.3f)
         isPressed -> Color(0xFF6AB0F9)
         isToggled -> Color(0xFF4CAF50)
         else -> Color(0xFF5A5A6A)
     }
+
+    val textColor = if (config.isEnabled) Color.White else Color(0xFF555555)
 
     Box(
         modifier = modifier
@@ -64,29 +68,32 @@ fun ControlButton(
                 color = borderColor,
                 shape = if (config.isToggle) RoundedCornerShape(8.dp) else CircleShape
             )
-            .pointerInput(config.id) {
-                detectTapGestures(
-                    onPress = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (config.isToggle) {
-                            // 切换按钮：按下时立即切换状态
-                            onPressed(!isToggled)
-                            // 等待释放，但不执行任何操作
-                            tryAwaitRelease()
-                        } else {
-                            // 普通按钮：按下时触发，释放时结束
-                            onPressed(true)
-                            tryAwaitRelease()
-                            onPressed(false)
-                        }
+            .then(
+                if (config.isEnabled) {
+                    Modifier.pointerInput(config.id, isToggled) {
+                        detectTapGestures(
+                            onPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (config.isToggle) {
+                                    onPressed(!isToggled)
+                                    tryAwaitRelease()
+                                } else {
+                                    onPressed(true)
+                                    tryAwaitRelease()
+                                    onPressed(false)
+                                }
+                            }
+                        )
                     }
-                )
-            },
+                } else {
+                    Modifier
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = config.name,
-            color = Color.White,
+            color = textColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center

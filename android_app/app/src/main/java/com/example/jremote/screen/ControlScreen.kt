@@ -16,16 +16,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -79,6 +84,9 @@ fun ControlScreen(
     connectionStatus: ConnectionStatus,
     debugMessages: List<DebugMessage>,
     isSending: Boolean,
+    isInControlMode: Boolean,
+    isEmergencyStopped: Boolean,
+    showDebugPanel: Boolean,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -87,17 +95,19 @@ fun ControlScreen(
     onSettingsClick: () -> Unit,
     onConnectionClick: () -> Unit,
     onStartSending: () -> Unit,
-    onStopSending: () -> Unit
+    onStopSending: () -> Unit,
+    onEmergencyStop: () -> Unit,
+    onExitControlMode: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
 
-    DisposableEffect(isSending) {
+    DisposableEffect(isInControlMode) {
         activity?.let {
             val window = it.window
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-            if (isSending) {
+            if (isInControlMode) {
                 it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 WindowCompat.setDecorFitsSystemWindows(window, false)
                 insetsController.hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
@@ -120,11 +130,12 @@ fun ControlScreen(
         }
     }
 
-    if (!isSending) {
+    if (!isInControlMode) {
         PortraitModeScreen(
             connectionStatus = connectionStatus,
             onConnectionClick = onConnectionClick,
-            onStartControl = onStartSending
+            onStartControl = onStartSending,
+            onSettingsClick = onSettingsClick
         )
     } else {
         LandscapeControlScreen(
@@ -135,6 +146,8 @@ fun ControlScreen(
             connectionStatus = connectionStatus,
             debugMessages = debugMessages,
             isSending = isSending,
+            isEmergencyStopped = isEmergencyStopped,
+            showDebugPanel = showDebugPanel,
             rssi = rssi,
             latency = latency,
             onLeftJoystickChange = onLeftJoystickChange,
@@ -142,7 +155,9 @@ fun ControlScreen(
             onButtonPressed = onButtonPressed,
             onSettingsClick = onSettingsClick,
             onConnectionClick = onConnectionClick,
-            onStopSending = onStopSending
+            onStartSending = onStartSending,
+            onStopSending = onExitControlMode,
+            onEmergencyStop = onEmergencyStop
         )
     }
 }
@@ -151,7 +166,8 @@ fun ControlScreen(
 private fun PortraitModeScreen(
     connectionStatus: ConnectionStatus,
     onConnectionClick: () -> Unit,
-    onStartControl: () -> Unit
+    onStartControl: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -159,6 +175,7 @@ private fun PortraitModeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF12121A))
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -218,13 +235,11 @@ private fun PortraitModeScreen(
 
         Button(
             onClick = onStartControl,
-            enabled = connectionStatus.isConnected,
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4A90D9),
-                disabledContainerColor = Color(0xFF3A3A4A)
+                containerColor = Color(0xFF4A90D9)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -235,10 +250,35 @@ private fun PortraitModeScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF3A3A4A)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "设置",
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "设置",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (connectionStatus.isConnected) "点击启动进入横屏控制模式" else "请先连接蓝牙设备",
+            text = if (connectionStatus.isConnected) "点击启动进入横屏控制模式" else "未连接设备",
             color = if (connectionStatus.isConnected) Color(0xFF4CAF50) else Color(0xFFFF9800),
             fontSize = 14.sp
         )
@@ -248,34 +288,35 @@ private fun PortraitModeScreen(
 @Composable
 private fun JoystickInfoPanel(
     label: String,
-    state: JoystickState
+    state: JoystickState,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF1A1A2A).copy(alpha = 0.8f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = label,
             color = Color(0xFF888888),
-            fontSize = 11.sp
+            fontSize = 10.sp
         )
         Spacer(modifier = Modifier.height(2.dp))
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = String.format("X:%+.2f", state.x),
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = String.format("Y:%+.2f", state.y),
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -396,6 +437,8 @@ private fun LandscapeControlScreen(
     connectionStatus: ConnectionStatus,
     debugMessages: List<DebugMessage>,
     isSending: Boolean,
+    isEmergencyStopped: Boolean,
+    showDebugPanel: Boolean,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -403,7 +446,9 @@ private fun LandscapeControlScreen(
     onButtonPressed: (Int, Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     onConnectionClick: () -> Unit,
-    onStopSending: () -> Unit
+    onStartSending: () -> Unit,
+    onStopSending: () -> Unit,
+    onEmergencyStop: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -474,166 +519,32 @@ private fun LandscapeControlScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 56.dp, bottom = 8.dp, start = 24.dp, end = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(top = 56.dp, bottom = 8.dp, start = 16.dp, end = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 左侧区域
-            Column(
+            // 左侧摇杆区域
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
+                contentAlignment = Alignment.Center
             ) {
-                // 左上：LB, LT（与右侧对称）
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // 摇杆上方：4个切换按钮（2x2布局）L1-L4
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    buttonConfigs.getOrNull(4)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 50.dp,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                        )
-                    }
-                    buttonConfigs.getOrNull(6)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            size = 50.dp,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                        )
-                    }
-                }
-
-                // 左侧摇杆（缩小到140dp）
-                Joystick(
-                    size = 140.dp,
-                    onStateChanged = onLeftJoystickChange
-                )
-
-                // 左摇杆数值显示
-                JoystickInfoPanel(
-                    label = "左摇杆",
-                    state = leftJoystickState
-                )
-            }
-
-            // 中间区域
-            Column(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // 中上部：日志面板
-                ExpandableLogPanel(
-                    debugMessages = debugMessages,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 中下部：START, SELECT
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    buttonConfigs.getOrNull(8)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            size = 48.dp,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                        )
-                    }
-                    buttonConfigs.getOrNull(9)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            size = 48.dp,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) }
-                        )
-                    }
-                }
-            }
-
-            // 右侧区域
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                // 右上：ABXY + RB, RT（组合布局）
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // ABXY 十字布局
-                    Box(
-                        modifier = Modifier.size(130.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Y (上)
-                        buttonConfigs.getOrNull(3)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                size = 45.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                                modifier = Modifier.align(Alignment.TopCenter)
-                            )
-                        }
-                        // X (左)
-                        buttonConfigs.getOrNull(2)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                size = 45.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                                modifier = Modifier.align(Alignment.CenterStart)
-                            )
-                        }
-                        // B (下)
-                        buttonConfigs.getOrNull(1)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                size = 45.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                                modifier = Modifier.align(Alignment.BottomCenter)
-                            )
-                        }
-                        // A (右)
-                        buttonConfigs.getOrNull(0)?.let { config ->
-                            ControlButton(
-                                config = config,
-                                isPressed = buttonStates[config.id] ?: false,
-                                size = 45.dp,
-                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                                modifier = Modifier.align(Alignment.CenterEnd)
-                            )
-                        }
-                    }
-
-                    // RB, RT 放在右侧，与左侧 LB, LT 对称
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        buttonConfigs.getOrNull(5)?.let { config ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        buttonConfigs.getOrNull(6)?.let { config ->
                             ControlButton(
                                 config = config,
                                 isPressed = buttonStates[config.id] ?: false,
                                 isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                                size = 50.dp,
+                                size = 40.dp,
                                 onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                             )
                         }
@@ -641,23 +552,281 @@ private fun LandscapeControlScreen(
                             ControlButton(
                                 config = config,
                                 isPressed = buttonStates[config.id] ?: false,
-                                size = 50.dp,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        buttonConfigs.getOrNull(8)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                        buttonConfigs.getOrNull(9)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
                                 onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                             )
                         }
                     }
                 }
 
-                // 右侧摇杆（缩小到140dp，与左侧对称）
-                Joystick(
-                    size = 140.dp,
-                    onStateChanged = onRightJoystickChange
-                )
+                // 摇杆周围环绕3个按钮（LX、LY、LZ）- 在圆上，间距相等，偏向屏幕中心
+                Box(
+                    modifier = Modifier.size(260.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Joystick(
+                        size = 120.dp,
+                        onStateChanged = onLeftJoystickChange
+                    )
+                    // LX: 角度330°（右上）x=87, y=-50
+                    buttonConfigs.getOrNull(0)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = 87.dp, y = (-50).dp)
+                        )
+                    }
+                    // LY: 角度0°（正右）x=100, y=0
+                    buttonConfigs.getOrNull(1)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = 100.dp, y = 0.dp)
+                        )
+                    }
+                    // LZ: 角度30°（右下）x=87, y=50
+                    buttonConfigs.getOrNull(2)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = 87.dp, y = 50.dp)
+                        )
+                    }
+                }
 
-                // 右摇杆数值显示
                 JoystickInfoPanel(
-                    label = "右摇杆",
-                    state = rightJoystickState
+                    label = "L",
+                    state = leftJoystickState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(top = 4.dp)
+                )
+            }
+
+            // 中间区域：状态指示 + START/STOP按钮 + 日志
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 状态指示器
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val statusColor = when {
+                        !connectionStatus.isConnected -> Color(0xFFF44336)
+                        isEmergencyStopped -> Color(0xFFFF9800)
+                        isSending -> Color(0xFF4CAF50)
+                        else -> Color(0xFFF44336)
+                    }
+                    val statusText = when {
+                        !connectionStatus.isConnected -> "遥控器断开连接"
+                        isEmergencyStopped -> "设备急停中"
+                        isSending -> "遥控正常"
+                        else -> "遥控未就绪"
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(statusColor, shape = CircleShape)
+                    )
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // START/STOP切换按钮
+                Button(
+                    onClick = {
+                        if (isSending) {
+                            onEmergencyStop()
+                        } else {
+                            onStartSending()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSending) Color(0xFFF44336) else Color(0xFF4CAF50)
+                    ),
+                    modifier = Modifier
+                        .height(56.dp)
+                        .fillMaxWidth(0.6f)
+                ) {
+                    Text(
+                        text = if (isSending) "STOP" else "START",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (showDebugPanel) {
+                    ExpandableLogPanel(
+                        debugMessages = debugMessages,
+                        modifier = Modifier
+                            .height(220.dp)
+                            .fillMaxWidth()
+                    )
+                }
+            }
+
+            // 右侧摇杆区域
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                // 摇杆上方：4个切换按钮（2x2布局）R1-R4
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        buttonConfigs.getOrNull(10)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                        buttonConfigs.getOrNull(11)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        buttonConfigs.getOrNull(12)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                        buttonConfigs.getOrNull(13)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 40.dp,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) }
+                            )
+                        }
+                    }
+                }
+
+                // 摇杆周围环绕3个按钮（RX、RY、RZ）- 在圆上，间距相等，偏向屏幕中心
+                Box(
+                    modifier = Modifier.size(260.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Joystick(
+                        size = 120.dp,
+                        onStateChanged = onRightJoystickChange
+                    )
+                    // RX: 角度150°（左下）x=-87, y=-50
+                    buttonConfigs.getOrNull(3)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = (-87).dp, y = (-50).dp)
+                        )
+                    }
+                    // RY: 角度180°（正左）x=-100, y=0
+                    buttonConfigs.getOrNull(4)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = (-100).dp, y = 0.dp)
+                        )
+                    }
+                    // RZ: 角度210°（左上）x=-87, y=50
+                    buttonConfigs.getOrNull(5)?.let { config ->
+                        ControlButton(
+                            config = config,
+                            isPressed = buttonStates[config.id] ?: false,
+                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                            size = 45.dp,
+                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(x = (-87).dp, y = (50).dp)
+                        )
+                    }
+                }
+
+                JoystickInfoPanel(
+                    label = "R",
+                    state = rightJoystickState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(top = 4.dp)
                 )
             }
         }

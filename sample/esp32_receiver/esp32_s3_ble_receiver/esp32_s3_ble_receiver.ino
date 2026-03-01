@@ -72,21 +72,39 @@ class MyCallbacks: public BLECharacteristicCallbacks {
         }
         
         // 检查是否是控制数据包 (9字节)
-        if (rxValue.length() == 9 && rxValue[0] == 0xAA) {
+        if (rxValue.length() == 9) {
           const uint8_t* data = (const uint8_t*)rxValue.c_str();
+          uint8_t header = data[0];
           
-          controlData.header = data[0];
-          controlData.leftJoystick.x = data[1];
-          controlData.leftJoystick.y = data[2];
-          controlData.rightJoystick.x = data[3];
-          controlData.rightJoystick.y = data[4];
-          controlData.buttons = (data[5]) | 
-                               (data[6] << 8) | 
-                               (data[7] << 16) | 
-                               (data[8] << 24);
-          
-          lastPacketTime = millis();
-          packetCount++;
+          // 检查帧头
+          if (header == 0xAA) {
+            // 正常控制数据
+            controlData.header = header;
+            controlData.leftJoystick.x = data[1];
+            controlData.leftJoystick.y = data[2];
+            controlData.rightJoystick.x = data[3];
+            controlData.rightJoystick.y = data[4];
+            controlData.buttons = (data[5]) | 
+                                 (data[6] << 8) | 
+                                 (data[7] << 16) | 
+                                 (data[8] << 24);
+            
+            lastPacketTime = millis();
+            packetCount++;
+          } else if (header == 0xEE) {
+            // 急停信号
+            controlData.header = header;
+            controlData.leftJoystick.x = 0;
+            controlData.leftJoystick.y = 0;
+            controlData.rightJoystick.x = 0;
+            controlData.rightJoystick.y = 0;
+            controlData.buttons = 0;
+            
+            lastPacketTime = millis();
+            packetCount++;
+            
+            Serial.println("\n>>> 急停触发! STOP <<<");
+          }
         }
       }
     }
@@ -186,6 +204,11 @@ void loop() {
 void printControlData() {
   Serial.print("\n");
   
+  // 检查是否是急停状态
+  if (controlData.header == 0xEE) {
+    Serial.print("[急停] ");
+  }
+  
   Serial.print("L:");
   printJoystick(controlData.leftJoystick);
   
@@ -220,10 +243,10 @@ void printButtons(uint32_t buttons) {
     return;
   }
   
-  const char* buttonNames[] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "START", "SELECT"};
+  const char* buttonNames[] = {"LX", "LY", "LZ", "RX", "RY", "RZ", "L1", "L2", "L3", "L4", "R1", "R2", "R3", "R4"};
   bool first = true;
   
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 14; i++) {
     if (buttons & (1 << i)) {
       if (!first) Serial.print("+");
       Serial.print(buttonNames[i]);

@@ -5,11 +5,5 @@ data class ButtonConfig(
     val name: String,
     val keyCode: Byte,
     val isToggle: Boolean = false,
-    val isPressed: Boolean = false
-)
-
-data class ButtonState(
-    val config: ButtonConfig,
-    val isPressed: Boolean = false,
-    val isToggled: Boolean = false
+    val isEnabled: Boolean = true
 )

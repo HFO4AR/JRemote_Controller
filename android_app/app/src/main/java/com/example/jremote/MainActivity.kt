@@ -53,6 +53,9 @@ fun AppNavigation(
     val connectionStatus by viewModel.connectionStatus.collectAsState()
     val debugMessages by viewModel.debugMessages.collectAsState()
     val isSending by viewModel.isSending.collectAsState()
+    val isInControlMode by viewModel.isInControlMode.collectAsState()
+    val isEmergencyStopped by viewModel.isEmergencyStopped.collectAsState()
+    val settings by viewModel.settings.collectAsState()
     val rssi by viewModel.rssi.collectAsState()
     val latency by viewModel.latency.collectAsState()
 
@@ -70,6 +73,9 @@ fun AppNavigation(
                 connectionStatus = connectionStatus,
                 debugMessages = debugMessages,
                 isSending = isSending,
+                isInControlMode = isInControlMode,
+                isEmergencyStopped = isEmergencyStopped,
+                showDebugPanel = settings.showDebugPanel,
                 rssi = rssi,
                 latency = latency,
                 onLeftJoystickChange = { viewModel.updateLeftJoystick(it) },
@@ -78,7 +84,9 @@ fun AppNavigation(
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onConnectionClick = { navController.navigate(Screen.Connection.route) },
                 onStartSending = { viewModel.startSending() },
-                onStopSending = { viewModel.stopSending() }
+                onStopSending = { viewModel.stopSending() },
+                onEmergencyStop = { viewModel.emergencyStop() },
+                onExitControlMode = { viewModel.exitControlMode() }
             )
         }
         
@@ -102,11 +110,12 @@ fun AppNavigation(
         }
         
         composable(Screen.Settings.route) {
+            val settings by viewModel.settings.collectAsState()
             SettingsScreen(
                 buttonConfigs = buttonConfigs,
+                settings = settings,
                 onUpdateButtonConfig = { viewModel.updateButtonConfig(it) },
-                onAddButtonConfig = { viewModel.addButtonConfig(it) },
-                onRemoveButtonConfig = { viewModel.removeButtonConfig(it) },
+                onUpdateSettings = { viewModel.updateSettings(it) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
