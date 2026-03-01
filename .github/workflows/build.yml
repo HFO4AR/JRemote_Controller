@@ -33,7 +33,7 @@ jobs:
       run: chmod +x ./android_app/gradlew
 
     - name: Build with Gradle
-      run: cd android_app && ./gradlew assembleDebug --no-lint
+      run: cd android_app && ./gradlew assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -67,7 +67,7 @@ jobs:
       run: chmod +x ./android_app/gradlew
 
     - name: Build with Gradle
-      run: cd android_app && ./gradlew assembleRelease --no-lint
+      run: cd android_app && ./gradlew assembleRelease
       env:
         JREMOTE_KEY: ${{ secrets.JREMOTE_KEY }}
 
