@@ -41,7 +41,7 @@ android {
             }
         }
         debug {
-            signingConfig = null
+            // signingConfig = null
         }
     }
     compileOptions {

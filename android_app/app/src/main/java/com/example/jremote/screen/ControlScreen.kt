@@ -36,6 +36,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -242,6 +244,148 @@ private fun PortraitModeScreen(
         )
     }
 }
+
+@Composable
+private fun JoystickInfoPanel(
+    label: String,
+    state: JoystickState
+) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1A1A2A).copy(alpha = 0.8f))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFF888888),
+            fontSize = 11.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = String.format("X:%+.2f", state.x),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = String.format("Y:%+.2f", state.y),
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun SignalStrengthIcon(rssi: Int) {
+    // RSSI 范围通常在 -100 到 -30 dBm
+    // -30 到 -50: 优秀 (4格)
+    // -50 到 -65: 良好 (3格)
+    // -65 到 -80: 一般 (2格)
+    // -80 以下: 差 (1格)
+    val signalLevel = when {
+        rssi >= -50 -> 4
+        rssi >= -65 -> 3
+        rssi >= -80 -> 2
+        else -> 1
+    }
+
+    val color = when (signalLevel) {
+        4 -> Color(0xFF4CAF50) // 绿色
+        3 -> Color(0xFF8BC34A) // 浅绿
+        2 -> Color(0xFFFFC107) // 黄色
+        else -> Color(0xFFF44336) // 红色
+    }
+
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        // 4个信号格
+        for (i in 1..4) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height((i * 4 + 4).dp)
+                    .background(
+                        if (i <= signalLevel) color else Color(0xFF444444),
+                        shape = RoundedCornerShape(1.dp)
+                    )
+            )
+        }
+    }
+
+    // 显示 RSSI 数值
+    Text(
+        text = "${rssi}dBm",
+        color = color,
+        fontSize = 10.sp,
+        modifier = Modifier.padding(start = 4.dp)
+    )
+}
+
+@Composable
+private fun LatencyDisplay(latency: Int) {
+    // 延迟等级
+    // < 50ms: 优秀 (绿色)
+    // 50-100ms: 良好 (浅绿)
+    // 100-200ms: 一般 (黄色)
+    // > 200ms: 差 (红色)
+    val color = when {
+        latency < 50 -> Color(0xFF4CAF50) // 绿色
+        latency < 100 -> Color(0xFF8BC34A) // 浅绿
+        latency < 200 -> Color(0xFFFFC107) // 黄色
+        else -> Color(0xFFF44336) // 红色
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(Color(0xFF2A2A3A), shape = RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        // 延迟图标 (闪电形状用圆圈代替)
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, shape = RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "${latency}ms",
+            color = color,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+private fun saveLogsToFile(context: android.content.Context, messages: List<DebugMessage>) {
+    try {
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "jremote_logs_$timestamp.txt"
+        
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val file = File(downloadsDir, fileName)
+        
+        val content = messages.joinToString("\n") { msg ->
+            "[${msg.timestamp}] [${msg.level}] [${msg.tag}] ${msg.message}"
+        }
+        
+        file.writeText(content)
+        Toast.makeText(context, "日志已保存到: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+
 
 @Composable
 private fun LandscapeControlScreen(
@@ -526,12 +670,12 @@ private fun ExpandableLogPanel(
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(true) }
+    var autoScroll by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val listState = rememberLazyListState()
 
-    // 自动滚动到底部
-    LaunchedEffect(debugMessages.size) {
-        if (debugMessages.isNotEmpty()) {
+    LaunchedEffect(debugMessages.size, autoScroll) {
+        if (autoScroll && debugMessages.isNotEmpty()) {
             listState.animateScrollToItem(debugMessages.size - 1)
         }
     }
@@ -570,16 +714,38 @@ private fun ExpandableLogPanel(
                 )
             }
 
-            IconButton(
-                onClick = { saveLogsToFile(context, debugMessages) },
-                modifier = Modifier.size(32.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "保存日志",
-                    tint = Color(0xFF4A90D9),
-                    modifier = Modifier.size(18.dp)
+                Text(
+                    text = "滚动",
+                    color = Color.White,
+                    fontSize = 11.sp
                 )
+                Switch(
+                    checked = autoScroll,
+                    onCheckedChange = { autoScroll = it },
+                    modifier = Modifier.height(24.dp),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFF4A90D9),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.DarkGray
+                    )
+                )
+
+                IconButton(
+                    onClick = { saveLogsToFile(context, debugMessages) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "保存日志",
+                        tint = Color(0xFF4A90D9),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 
@@ -604,14 +770,19 @@ private fun ExpandableLogPanel(
                         DebugLevel.INFO -> Color(0xFF4CAF50)
                         else -> Color(0xFF888888)
                     }
-                    val timeStr = java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault())
+                    val timeStr = java.text.SimpleDateFormat(
+                        "HH:mm:ss.SSS",
+                        java.util.Locale.getDefault()
+                    )
                         .format(java.util.Date(message.timestamp))
                     Text(
                         text = "[$timeStr][${message.tag}] ${message.message}",
                         color = color,
                         fontSize = 9.sp,
                         lineHeight = 12.sp,
-                        modifier = Modifier.padding(vertical = 1.dp)
+                        modifier = Modifier.padding(vertical = 1.dp),
+                        softWrap = true,
+                        maxLines = Int.MAX_VALUE
                     )
                 }
             }
@@ -619,142 +790,6 @@ private fun ExpandableLogPanel(
     }
 }
 
-private fun saveLogsToFile(context: android.content.Context, messages: List<DebugMessage>) {
-    try {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "jremote_logs_$timestamp.txt"
-        
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val file = File(downloadsDir, fileName)
-        
-        val content = messages.joinToString("\n") { msg ->
-            "[${msg.timestamp}] [${msg.level}] [${msg.tag}] ${msg.message}"
-        }
-        
-        file.writeText(content)
-        Toast.makeText(context, "日志已保存到: ${file.absolutePath}", Toast.LENGTH_LONG).show()
-    } catch (e: Exception) {
-        Toast.makeText(context, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
-    }
-}
 
-@Composable
-private fun JoystickInfoPanel(
-    label: String,
-    state: JoystickState
-) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1A1A2A).copy(alpha = 0.8f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = label,
-            color = Color(0xFF888888),
-            fontSize = 11.sp
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = String.format("X:%+.2f", state.x),
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = String.format("Y:%+.2f", state.y),
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
 
-@Composable
-private fun SignalStrengthIcon(rssi: Int) {
-    // RSSI 范围通常在 -100 到 -30 dBm
-    // -30 到 -50: 优秀 (4格)
-    // -50 到 -65: 良好 (3格)
-    // -65 到 -80: 一般 (2格)
-    // -80 以下: 差 (1格)
-    val signalLevel = when {
-        rssi >= -50 -> 4
-        rssi >= -65 -> 3
-        rssi >= -80 -> 2
-        else -> 1
-    }
 
-    val color = when (signalLevel) {
-        4 -> Color(0xFF4CAF50) // 绿色
-        3 -> Color(0xFF8BC34A) // 浅绿
-        2 -> Color(0xFFFFC107) // 黄色
-        else -> Color(0xFFF44336) // 红色
-    }
-
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        // 4个信号格
-        for (i in 1..4) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height((i * 4 + 4).dp)
-                    .background(
-                        if (i <= signalLevel) color else Color(0xFF444444),
-                        shape = RoundedCornerShape(1.dp)
-                    )
-            )
-        }
-    }
-
-    // 显示 RSSI 数值
-    Text(
-        text = "${rssi}dBm",
-        color = color,
-        fontSize = 10.sp,
-        modifier = Modifier.padding(start = 4.dp)
-    )
-}
-
-@Composable
-private fun LatencyDisplay(latency: Int) {
-    // 延迟等级
-    // < 50ms: 优秀 (绿色)
-    // 50-100ms: 良好 (浅绿)
-    // 100-200ms: 一般 (黄色)
-    // > 200ms: 差 (红色)
-    val color = when {
-        latency < 50 -> Color(0xFF4CAF50) // 绿色
-        latency < 100 -> Color(0xFF8BC34A) // 浅绿
-        latency < 200 -> Color(0xFFFFC107) // 黄色
-        else -> Color(0xFFF44336) // 红色
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(Color(0xFF2A2A3A), shape = RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        // 延迟图标 (闪电形状用圆圈代替)
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, shape = RoundedCornerShape(4.dp))
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = "${latency}ms",
-            color = color,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}

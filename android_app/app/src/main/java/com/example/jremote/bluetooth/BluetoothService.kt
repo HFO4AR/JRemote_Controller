@@ -52,7 +52,7 @@ class BluetoothService(private val context: Context) {
     
     private fun addDebugMessage(level: DebugLevel, tag: String, message: String) {
         val newMessage = DebugMessage(level = level, tag = tag, message = message)
-        _debugMessages.value = (_debugMessages.value + newMessage).takeLast(100)
+        _debugMessages.value = (_debugMessages.value + newMessage).takeLast(1000)
     }
     
     fun isBluetoothEnabled(): Boolean {
