@@ -25,9 +25,18 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 36
+        api-level: 35
         build-tools: 35.0.0
-        ndk: 25.1.8937393
+
+    - name: Create keystore directory
+      run: mkdir -p android_app/app/keystore
+
+    - name: Decode keystore
+      if: github.event_name == 'release' && github.event.action == 'created'
+      run: |
+        if [ -n "${{ secrets.JREMOTE_KEYSTORE }}" ]; then
+          echo "${{ secrets.JREMOTE_KEYSTORE }}" | base64 -d > android_app/app/keystore/release.keystore
+        fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x ./android_app/gradlew
@@ -59,9 +68,18 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
-        api-level: 36
+        api-level: 35
         build-tools: 35.0.0
-        ndk: 25.1.8937393
+
+    - name: Create keystore directory
+      run: mkdir -p android_app/app/keystore
+
+    - name: Decode keystore
+      if: github.event_name == 'release' && github.event.action == 'created'
+      run: |
+        if [ -n "${{ secrets.JREMOTE_KEYSTORE }}" ]; then
+          echo "${{ secrets.JREMOTE_KEYSTORE }}" | base64 -d > android_app/app/keystore/release.keystore
+        fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x ./android_app/gradlew
@@ -70,6 +88,9 @@ jobs:
       run: cd android_app && ./gradlew assembleRelease
       env:
         JREMOTE_KEY: ${{ secrets.JREMOTE_KEY }}
+
+    - name: Clean up keystore
+      run: rm -f android_app/app/keystore/release.keystore
 
     - name: Upload Release APK
       uses: softprops/action-gh-release@v1
