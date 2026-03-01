@@ -18,6 +18,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (System.getenv("JREMOTE_KEY") != null) {
+            create("release") {
+                keyAlias = "jremote-key"
+                keyPassword = System.getenv("JREMOTE_KEY")
+                storePassword = System.getenv("JREMOTE_KEY")
+                storeFile = file("keystore/release.keystore")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,15 +36,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (System.getenv("JREMOTE_KEY") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
-    }
-    signingConfigs {
-        create("release") {
-            keyAlias = "jremote-key"
-            keyPassword = System.getenv("JREMOTE_KEY")
-            storePassword = System.getenv("JREMOTE_KEY")
-            storeFile = file("keystore/release.keystore")
+        debug {
+            signingConfig = null
         }
     }
     compileOptions {
