@@ -319,6 +319,7 @@ private fun TabButton(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun DeviceItem(
     device: BluetoothDevice,
     isSelected: Boolean,
