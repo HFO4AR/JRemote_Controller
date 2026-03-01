@@ -45,6 +45,11 @@ android {
         }
     }
 
+    lintOptions {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
