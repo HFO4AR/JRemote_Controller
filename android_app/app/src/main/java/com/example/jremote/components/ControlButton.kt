@@ -30,6 +30,7 @@ fun ControlButton(
     isPressed: Boolean = false,
     isToggled: Boolean = false,
     size: Dp = 60.dp,
+    hapticFeedbackEnabled: Boolean = true,
     onPressed: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -73,7 +74,9 @@ fun ControlButton(
                     Modifier.pointerInput(config.id, isToggled) {
                         detectTapGestures(
                             onPress = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (hapticFeedbackEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
                                 if (config.isToggle) {
                                     onPressed(!isToggled)
                                     tryAwaitRelease()

@@ -5,7 +5,8 @@ data class AppSettings(
     val showDebugPanel: Boolean = true,
     val hapticFeedback: Boolean = true,
     val autoReconnect: Boolean = false,
-    val toggleButtonLayout: ToggleButtonLayout = ToggleButtonLayout.HORIZONTAL
+    val toggleButtonLayout: ToggleButtonLayout = ToggleButtonLayout.HORIZONTAL,
+    val lastConnectedDeviceAddress: String? = null
 )
 
 enum class ToggleButtonLayout {

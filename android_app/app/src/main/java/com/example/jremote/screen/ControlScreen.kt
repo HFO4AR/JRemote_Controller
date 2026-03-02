@@ -89,6 +89,7 @@ fun ControlScreen(
     isEmergencyStopped: Boolean,
     showDebugPanel: Boolean,
     toggleButtonLayout: ToggleButtonLayout,
+    hapticFeedback: Boolean,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -151,6 +152,7 @@ fun ControlScreen(
             isEmergencyStopped = isEmergencyStopped,
             showDebugPanel = showDebugPanel,
             toggleButtonLayout = toggleButtonLayout,
+            hapticFeedback = hapticFeedback,
             rssi = rssi,
             latency = latency,
             onLeftJoystickChange = onLeftJoystickChange,
@@ -443,6 +445,7 @@ private fun LandscapeControlScreen(
     isEmergencyStopped: Boolean,
     showDebugPanel: Boolean,
     toggleButtonLayout: ToggleButtonLayout,
+    hapticFeedback: Boolean,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -543,6 +546,7 @@ private fun LandscapeControlScreen(
                         buttonStates = buttonStates,
                         startIndex = 6,
                         layout = toggleButtonLayout,
+                        hapticFeedback = hapticFeedback,
                         onButtonPressed = onButtonPressed
                     )
                 }
@@ -563,6 +567,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -576,6 +581,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -589,6 +595,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -697,6 +704,7 @@ private fun LandscapeControlScreen(
                         buttonStates = buttonStates,
                         startIndex = 10,
                         layout = toggleButtonLayout,
+                        hapticFeedback = hapticFeedback,
                         onButtonPressed = onButtonPressed
                     )
                 }
@@ -717,6 +725,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -730,6 +739,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -743,6 +753,7 @@ private fun LandscapeControlScreen(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 45.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) },
                             modifier = Modifier
                                 .align(Alignment.Center)
@@ -769,6 +780,7 @@ private fun ToggleButtonsLayout(
     buttonStates: Map<Int, Boolean>,
     startIndex: Int,
     layout: ToggleButtonLayout,
+    hapticFeedback: Boolean,
     onButtonPressed: (Int, Boolean) -> Unit
 ) {
     when (layout) {
@@ -784,6 +796,7 @@ private fun ToggleButtonsLayout(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 50.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                         )
                     }
@@ -803,6 +816,7 @@ private fun ToggleButtonsLayout(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 40.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                         )
                     }
@@ -812,6 +826,7 @@ private fun ToggleButtonsLayout(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 40.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                         )
                     }
@@ -823,6 +838,7 @@ private fun ToggleButtonsLayout(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 40.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                         )
                     }
@@ -832,6 +848,7 @@ private fun ToggleButtonsLayout(
                             isPressed = buttonStates[config.id] ?: false,
                             isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
                             size = 40.dp,
+                            hapticFeedbackEnabled = hapticFeedback,
                             onPressed = { pressed -> onButtonPressed(config.id, pressed) }
                         )
                     }

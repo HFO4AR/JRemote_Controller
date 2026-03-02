@@ -73,6 +73,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     val latency: StateFlow<Int?> = bleService.latency
 
     private var sendJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var previousConnectionStatus = false
 
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
@@ -94,6 +96,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             bleService.connectionStatus.collect { status ->
+                // 检测连接断开事件
+                if (previousConnectionStatus && !status.isConnected) {
+                    // 连接断开，触发自动重连
+                    onConnectionLost()
+                }
+                previousConnectionStatus = status.isConnected
                 _connectionStatus.value = status
             }
         }
@@ -204,17 +212,102 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     fun connectToDevice(deviceAddress: String) {
         val device = bondedDevices.find { it.address == deviceAddress }
             ?: scannedDevices.value.find { it.address == deviceAddress }
-        
+
         device?.let {
             viewModelScope.launch {
+                // 保存最后连接的设备地址
+                val newSettings = _settings.value.copy(lastConnectedDeviceAddress = deviceAddress)
+                settingsRepository.updateAppSettings(newSettings)
+
+                // 如果启用自动重连，设置标志
+                if (_settings.value.autoReconnect) {
+                    bleService.setAutoReconnect(true)
+                }
+
                 bleService.connect(device)
             }
         }
     }
     
     fun disconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
         stopSending()
         bleService.disconnect()
+    }
+
+    private fun onConnectionLost() {
+        // 如果正在发送数据，停止发送
+        if (_isSending.value) {
+            stopSending()
+        }
+
+        // 检查是否启用自动重连
+        if (_settings.value.autoReconnect) {
+            val lastDeviceAddress = _settings.value.lastConnectedDeviceAddress
+            if (lastDeviceAddress != null) {
+                startReconnect(lastDeviceAddress)
+            }
+        }
+    }
+
+    private fun startReconnect(deviceAddress: String) {
+        // 取消之前的重连任务
+        reconnectJob?.cancel()
+
+        reconnectJob = viewModelScope.launch {
+            // 等待2秒后再尝试重连，避免频繁重连
+            delay(2000)
+
+            // 获取已配对设备列表
+            val device = bondedDevices.find { it.address == deviceAddress }
+                ?: bleService.scannedDevices.value.find { it.address == deviceAddress }
+
+            if (device != null) {
+                // 最多重连5次
+                var reconnectAttempts = 0
+                val maxReconnectAttempts = 5
+
+                while (reconnectAttempts < maxReconnectAttempts && !_connectionStatus.value.isConnected) {
+                    reconnectAttempts++
+                    addDebugMessage(
+                        DebugLevel.INFO,
+                        "AutoReconnect",
+                        "正在重连 (尝试 $reconnectAttempts/$maxReconnectAttempts)..."
+                    )
+
+                    val success = bleService.connect(device)
+                    if (success) {
+                        addDebugMessage(DebugLevel.INFO, "AutoReconnect", "重连成功!")
+                        break
+                    }
+
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        // 等待3秒后再试
+                        delay(3000)
+                    }
+                }
+
+                if (!_connectionStatus.value.isConnected) {
+                    addDebugMessage(
+                        DebugLevel.WARNING,
+                        "AutoReconnect",
+                        "重连失败，请手动重新连接"
+                    )
+                }
+            } else {
+                addDebugMessage(
+                    DebugLevel.WARNING,
+                    "AutoReconnect",
+                    "未找到之前连接的设备: $deviceAddress"
+                )
+            }
+        }
+    }
+
+    private fun addDebugMessage(level: DebugLevel, tag: String, message: String) {
+        val newMessage = DebugMessage(level = level, tag = tag, message = message)
+        _debugMessages.value = (_debugMessages.value + newMessage).takeLast(1000)
     }
 
     fun removeBond(deviceAddress: String) {
@@ -242,6 +335,11 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     }
     
     fun updateSettings(newSettings: AppSettings) {
+        // 如果自动重连设置发生变化，更新 BleService
+        if (newSettings.autoReconnect != _settings.value.autoReconnect) {
+            bleService.setAutoReconnect(newSettings.autoReconnect)
+        }
+
         _settings.value = newSettings
         viewModelScope.launch {
             settingsRepository.updateAppSettings(newSettings)

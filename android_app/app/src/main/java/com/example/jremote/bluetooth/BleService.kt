@@ -53,6 +53,7 @@ class BleService(private val context: Context) {
     
     private var isConnected = false
     private var currentDevice: BluetoothDevice? = null
+    private var autoReconnectEnabled = false
     
     private val _connectionStatus = MutableStateFlow(ConnectionStatus())
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
@@ -417,6 +418,7 @@ class BleService(private val context: Context) {
     }
     
     fun disconnect() {
+        autoReconnectEnabled = false
         stopRssiUpdates()
         stopPing()
         try {
@@ -437,6 +439,12 @@ class BleService(private val context: Context) {
         _latency.value = null
         _connectionStatus.value = ConnectionStatus()
     }
+
+    fun setAutoReconnect(enabled: Boolean) {
+        autoReconnectEnabled = enabled
+    }
+
+    fun isAutoReconnectEnabled(): Boolean = autoReconnectEnabled
 
     @Suppress("MissingPermission")
     private fun startRssiUpdates() {

@@ -15,13 +15,14 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "jremote_settings")
 
 class SettingsRepository(private val context: Context) {
-    
+
     private object Keys {
         val SEND_INTERVAL_MS = longPreferencesKey("send_interval_ms")
         val SHOW_DEBUG_PANEL = booleanPreferencesKey("show_debug_panel")
         val HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         val AUTO_RECONNECT = booleanPreferencesKey("auto_reconnect")
         val TOGGLE_BUTTON_LAYOUT = stringPreferencesKey("toggle_button_layout")
+        val LAST_CONNECTED_DEVICE_ADDRESS = stringPreferencesKey("last_connected_device_address")
     }
     
     private object ButtonKeys {
@@ -39,7 +40,8 @@ class SettingsRepository(private val context: Context) {
                 ToggleButtonLayout.valueOf(prefs[Keys.TOGGLE_BUTTON_LAYOUT] ?: "HORIZONTAL")
             } catch (e: IllegalArgumentException) {
                 ToggleButtonLayout.HORIZONTAL
-            }
+            },
+            lastConnectedDeviceAddress = prefs[Keys.LAST_CONNECTED_DEVICE_ADDRESS]
         )
     }
     
@@ -50,6 +52,9 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.HAPTIC_FEEDBACK] = settings.hapticFeedback
             prefs[Keys.AUTO_RECONNECT] = settings.autoReconnect
             prefs[Keys.TOGGLE_BUTTON_LAYOUT] = settings.toggleButtonLayout.name
+            settings.lastConnectedDeviceAddress?.let {
+                prefs[Keys.LAST_CONNECTED_DEVICE_ADDRESS] = it
+            }
         }
     }
     

@@ -5,6 +5,9 @@
 *.ipr
 *.iws
 
+# Claude Code files
+.claude/
+
 # Build outputs
 build/
 */build/
