@@ -75,7 +75,7 @@ class UdpDiscovery {
                             val data = String(packet.data, 0, packet.length, StandardCharsets.UTF_8)
                             val address = packet.address.hostAddress ?: ""
 
-                            addDebugMessage(DebugLevel.DEBUG, TAG, "收到响应: $data from $address")
+                            addDebugMessage(DebugLevel.INFO, TAG, "收到响应: $data from $address")
 
                             // 解析设备信息
                             if (data.startsWith(DEVICE_PREFIX)) {
