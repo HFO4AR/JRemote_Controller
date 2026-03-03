@@ -243,7 +243,7 @@ void sendDiscoveryResponse(IPAddress& clientIP) {
              DATA_PORT);
 
     discoveryUdp.beginPacket(clientIP, DISCOVERY_PORT);
-    discoveryUdp.write(response);
+    discoveryUdp.write((const uint8_t*)response, strlen(response));
     discoveryUdp.endPacket();
 
     Serial.printf("发送发现响应: %s\n", response);
