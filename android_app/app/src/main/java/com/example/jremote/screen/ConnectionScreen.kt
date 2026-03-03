@@ -40,7 +40,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -353,30 +353,31 @@ private fun BleDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    PullToRefreshBox(
-        isRefreshing = isScanning,
-        onRefresh = onRefresh,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (scannedDevices.isEmpty()) {
-            EmptyDeviceList(
-                isScanning = isScanning,
-                onStartScan = onStartScan,
-                onStopScan = onStopScan,
-                isConnected = isConnected
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = scannedDevices,
-                    key = { it.address }
-                ) { device ->
+    if (scannedDevices.isEmpty()) {
+        EmptyDeviceList(
+            isScanning = isScanning,
+            onStartScan = onStartScan,
+            onStopScan = onStopScan,
+            isConnected = isConnected
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 下拉刷新
+            item {
+                PullToRefreshContainer(
+                    isRefreshing = isScanning,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            items(
+                items = scannedDevices,
+                key = { it.address }
+            ) { device ->
                 val isThisDeviceConnecting = connectingAddress == device.address
                 val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
                 val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
@@ -395,7 +396,6 @@ private fun BleDeviceList(
                 )
             }
         }
-        }
     }
 }
 
@@ -413,26 +413,27 @@ private fun WifiDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    PullToRefreshBox(
-        isRefreshing = isScanning,
-        onRefresh = onRefresh,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (devices.isEmpty()) {
-            EmptyDeviceList(
-                isScanning = isScanning,
-                onStartScan = onStartScan,
-                onStopScan = onStopScan,
-                isConnected = isConnected
-            )
-        } else {
+    if (devices.isEmpty()) {
+        EmptyDeviceList(
+            isScanning = isScanning,
+            onStartScan = onStartScan,
+            onStopScan = onStopScan,
+            isConnected = isConnected
+        )
+    } else {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // 下拉刷新
+            item {
+                PullToRefreshContainer(
+                    isRefreshing = isScanning,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             items(
                 items = devices,
                 key = { it.ip }
@@ -451,7 +452,6 @@ private fun WifiDeviceList(
                     }
                 )
             }
-        }
         }
     }
 }
