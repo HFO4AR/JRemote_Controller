@@ -2,7 +2,9 @@
 
 JRemote Controller 是一个基于蓝牙低功耗 (BLE) 的远程控制应用，允许用户通过 Android 设备控制 ESP32 等嵌入式设备。
 
-![alt text](docs/md_assets/control_screen.jpg)
+![alt text](docs/md_assets/Screenshot_2026-03-03-17-34-26-778_com.example.jremote.jpg)
+
+
 
 ## 项目结构
 
