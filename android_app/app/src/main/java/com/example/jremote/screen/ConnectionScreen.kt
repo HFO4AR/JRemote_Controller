@@ -48,7 +48,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -299,10 +298,7 @@ fun ConnectionScreen(
                             onConnect = { address ->
                                 connectingAddress = address
                                 onConnect(address)
-                            },
-                            onStartScan = onStartScan,
-                            onStopScan = onStopScan,
-                            onRefresh = onStartScan
+                            }
                         )
                     }
                     ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> {
@@ -311,15 +307,11 @@ fun ConnectionScreen(
                             isScanning = isWifiScanning,
                             isConnected = isConnected,
                             connectedDeviceName = connectedDeviceName,
-                            mode = currentConnectionMode,
                             connectingAddress = connectingAddress,
                             onConnect = { device ->
                                 connectingAddress = device.ip
                                 onConnectWifiDevice(device)
-                            },
-                            onStartScan = { onStartWifiScan(currentConnectionMode) },
-                            onStopScan = onStopWifiScan,
-                            onRefresh = { onStartWifiScan(currentConnectionMode) }
+                            }
                         )
                     }
                     ConnectionType.USB -> {
@@ -341,7 +333,6 @@ fun ConnectionScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BleDeviceList(
     scannedDevices: List<BluetoothDevice>,
@@ -349,105 +340,81 @@ private fun BleDeviceList(
     isConnected: Boolean,
     connectedDeviceName: String,
     connectingAddress: String?,
-    onConnect: (String) -> Unit,
-    onStartScan: () -> Unit,
-    onStopScan: () -> Unit,
-    onRefresh: () -> Unit
+    onConnect: (String) -> Unit
 ) {
     if (scannedDevices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
             isConnected = isConnected
         )
     } else {
-        PullToRefreshBox(
-            isRefreshing = isScanning,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = scannedDevices,
-                    key = { it.address }
-                ) { device ->
-                    val isThisDeviceConnecting = connectingAddress == device.address
-                    val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
-                    val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
+            items(
+                items = scannedDevices,
+                key = { it.address }
+            ) { device ->
+                val isThisDeviceConnecting = connectingAddress == device.address
+                val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
+                val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
 
-                    DeviceCard(
-                        deviceName = device.name ?: "未知设备",
-                        deviceAddress = device.address,
-                        isConnected = isThisDeviceConnected,
-                        isConnecting = isThisDeviceConnecting,
-                        isBonded = isBonded,
-                        onClick = {
-                            if (!isConnected && connectingAddress == null) {
-                                onConnect(device.address)
-                            }
+                DeviceCard(
+                    deviceName = device.name ?: "未知设备",
+                    deviceAddress = device.address,
+                    isConnected = isThisDeviceConnected,
+                    isConnecting = isThisDeviceConnecting,
+                    isBonded = isBonded,
+                    onClick = {
+                        if (!isConnected && connectingAddress == null) {
+                            onConnect(device.address)
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WifiDeviceList(
     devices: List<DiscoveredDevice>,
     isScanning: Boolean,
     isConnected: Boolean,
     connectedDeviceName: String,
-    mode: ConnectionType,
     connectingAddress: String?,
-    onConnect: (DiscoveredDevice) -> Unit,
-    onStartScan: () -> Unit,
-    onStopScan: () -> Unit,
-    onRefresh: () -> Unit
+    onConnect: (DiscoveredDevice) -> Unit
 ) {
     if (devices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
             isConnected = isConnected
         )
     } else {
-        PullToRefreshBox(
-            isRefreshing = isScanning,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = devices,
-                    key = { it.ip }
-                ) { device ->
-                    val isThisDeviceConnecting = connectingAddress == device.ip
-                    val isThisDeviceConnected = isConnected && connectedDeviceName == device.name
+            items(
+                items = devices,
+                key = { it.ip }
+            ) { device ->
+                val isThisDeviceConnecting = connectingAddress == device.ip
+                val isThisDeviceConnected = isConnected && connectedDeviceName == device.name
 
-                    WifiDeviceCard(
-                        device = device,
-                        isConnected = isThisDeviceConnected,
-                        isConnecting = isThisDeviceConnecting,
-                        onClick = {
-                            if (!isConnected && connectingAddress == null) {
-                                onConnect(device)
-                            }
+                WifiDeviceCard(
+                    device = device,
+                    isConnected = isThisDeviceConnected,
+                    isConnecting = isThisDeviceConnecting,
+                    onClick = {
+                        if (!isConnected && connectingAddress == null) {
+                            onConnect(device)
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -456,14 +423,10 @@ private fun WifiDeviceList(
 @Composable
 private fun EmptyDeviceList(
     isScanning: Boolean,
-    onStartScan: () -> Unit,
-    onStopScan: () -> Unit,
     isConnected: Boolean
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -493,49 +456,10 @@ private fun EmptyDeviceList(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "点击下方按钮重新扫描",
+                    text = "切换模式重新扫描",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "点击下方按钮开始扫描",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = { if (isScanning) onStopScan() else onStartScan() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isConnected
-        ) {
-            if (isScanning) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("停止扫描")
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("重新扫描")
             }
         }
     }
