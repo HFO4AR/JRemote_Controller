@@ -58,7 +58,7 @@ JRemote_Controller/
 
 ### 2. 安装 Android 应用
 
-前往 [Releases](https://github.com/your-repo/JRemote_Controller/releases) 页面下载最新版本的 APK 文件，直接安装到您的 Android 设备上。
+前往 [Releases](https://github.com/HFO4AR/JRemote_Controller/releases) 页面下载最新版本的 APK 文件，直接安装到您的 Android 设备上。
 
 ### 3. 连接设备
 
