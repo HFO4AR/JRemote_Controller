@@ -100,6 +100,9 @@ fun AppNavigation(
         composable(Screen.Connection.route) {
             val scannedDevices by viewModel.scannedDevices.collectAsState()
             val isScanning by viewModel.isScanning.collectAsState()
+            val currentConnectionMode by viewModel.currentConnectionMode.collectAsState()
+            val wifiScannedDevices by viewModel.wifiScannedDevices.collectAsState()
+            val isWifiScanning by viewModel.isWifiScanning.collectAsState()
 
             ConnectionScreen(
                 bondedDevices = viewModel.bondedDevices,
@@ -107,11 +110,18 @@ fun AppNavigation(
                 isScanning = isScanning,
                 isConnected = connectionStatus.isConnected,
                 connectedDeviceName = connectionStatus.deviceName,
+                currentConnectionMode = currentConnectionMode,
+                wifiScannedDevices = wifiScannedDevices,
+                isWifiScanning = isWifiScanning,
                 onConnect = { address -> viewModel.connectToDevice(address) },
                 onDisconnect = { viewModel.disconnect() },
                 onRemoveBond = { address -> viewModel.removeBond(address) },
                 onStartScan = { viewModel.startBleScan() },
                 onStopScan = { viewModel.stopBleScan() },
+                onStartWifiScan = { mode -> viewModel.startWifiDiscovery(mode) },
+                onStopWifiScan = { viewModel.stopWifiDiscovery() },
+                onConnectWifiDevice = { device -> viewModel.connectToWifiDevice(device) },
+                onSetConnectionMode = { mode -> viewModel.setConnectionMode(mode) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -11,6 +11,7 @@ data class ConnectionStatus(
 
 enum class ConnectionType {
     BLUETOOTH,
-    WIFI,
+    WIFI_AP,     // Wi-Fi AP 模式（直连）
+    WIFI_LAN,    // Wi-Fi 局域网模式
     USB
 }

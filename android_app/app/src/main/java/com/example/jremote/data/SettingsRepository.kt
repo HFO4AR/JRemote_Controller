@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "jremote_settings")
@@ -25,6 +26,8 @@ class SettingsRepository(private val context: Context) {
         val LAST_CONNECTED_DEVICE_ADDRESS = stringPreferencesKey("last_connected_device_address")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val LAST_CONNECTION_MODE = stringPreferencesKey("last_connection_mode")
+        val LAST_CONNECTED_DEVICE_IP = stringPreferencesKey("last_connected_device_ip")
     }
     
     private object ButtonKeys {
@@ -33,6 +36,14 @@ class SettingsRepository(private val context: Context) {
     }
     
     val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
+        val lastConnectionModeStr = context.dataStore.data.first()[Keys.LAST_CONNECTION_MODE] ?: "BLUETOOTH"
+        val lastConnectionMode = try {
+            ConnectionType.valueOf(lastConnectionModeStr)
+        } catch (e: Exception) {
+            ConnectionType.BLUETOOTH
+        }
+        val lastConnectedDeviceIp = context.dataStore.data.first()[Keys.LAST_CONNECTED_DEVICE_IP]
+
         AppSettings(
             sendIntervalMs = prefs[Keys.SEND_INTERVAL_MS] ?: 20L,
             showDebugPanel = prefs[Keys.SHOW_DEBUG_PANEL] ?: true,
@@ -49,7 +60,9 @@ class SettingsRepository(private val context: Context) {
             } catch (e: IllegalArgumentException) {
                 ThemeMode.SYSTEM
             },
-            dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: false
+            dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: false,
+            lastConnectionMode = lastConnectionMode,
+            lastConnectedDeviceIp = lastConnectedDeviceIp
         )
     }
     
@@ -65,6 +78,10 @@ class SettingsRepository(private val context: Context) {
             }
             prefs[Keys.THEME_MODE] = settings.themeMode.name
             prefs[Keys.DYNAMIC_COLOR] = settings.dynamicColor
+            prefs[Keys.LAST_CONNECTION_MODE] = settings.lastConnectionMode.name
+            settings.lastConnectedDeviceIp?.let {
+                prefs[Keys.LAST_CONNECTED_DEVICE_IP] = it
+            }
         }
     }
     

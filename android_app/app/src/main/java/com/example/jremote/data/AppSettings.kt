@@ -8,7 +8,9 @@ data class AppSettings(
     val toggleButtonLayout: ToggleButtonLayout = ToggleButtonLayout.HORIZONTAL,
     val lastConnectedDeviceAddress: String? = null,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = false
+    val dynamicColor: Boolean = false,
+    val lastConnectionMode: ConnectionType = ConnectionType.BLUETOOTH,
+    val lastConnectedDeviceIp: String? = null  // Wi-Fi 模式使用
 )
 
 enum class ToggleButtonLayout {

@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.jremote.bluetooth.BleService
 import com.example.jremote.data.AppSettings
 import com.example.jremote.data.ButtonConfig
-import com.example.jremote.data.ConnectionMode
+import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.ControlData
 import com.example.jremote.data.DebugLevel
@@ -89,8 +89,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     val scannedDevices = bleService.scannedDevices
     val isScanning = bleService.isScanning
 
-    private val _currentConnectionMode = MutableStateFlow(ConnectionMode.BLE)
-    val currentConnectionMode: StateFlow<ConnectionMode> = _currentConnectionMode.asStateFlow()
+    private val _currentConnectionMode = MutableStateFlow(ConnectionType.BLUETOOTH)
+    val currentConnectionMode: StateFlow<ConnectionType> = _currentConnectionMode.asStateFlow()
 
     val wifiScannedDevices = udpDiscovery.discoveredDevices
     val isWifiScanning = udpDiscovery.isScanning
@@ -160,7 +160,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         bleService.stopBleScan()
     }
 
-    fun startWifiDiscovery(mode: ConnectionMode) {
+    fun startWifiDiscovery(mode: ConnectionType) {
         udpDiscovery.startDiscovery(mode)
     }
 
@@ -172,7 +172,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             // 保存最后连接的设备信息
             val newSettings = _settings.value.copy(
-                lastConnectionMode = ConnectionMode.LAN,
+                lastConnectionMode = ConnectionType.WIFI_LAN,
                 lastConnectedDeviceIp = device.ip
             )
             settingsRepository.updateAppSettings(newSettings)
@@ -186,12 +186,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         wifiService.disconnect()
     }
 
-    fun setConnectionMode(mode: ConnectionMode) {
+    fun setConnectionMode(mode: ConnectionType) {
         // 如果当前已连接，先断开
         if (_connectionStatus.value.isConnected) {
             when (_currentConnectionMode.value) {
-                ConnectionMode.BLE -> bleService.disconnect()
-                ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+                ConnectionType.BLUETOOTH -> bleService.disconnect()
+                ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
             }
         }
         _currentConnectionMode.value = mode
@@ -240,8 +240,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         val data = byteArrayOf(0xAA.toByte()) + stopData.toByteArray()
 
         when (_currentConnectionMode.value) {
-            ConnectionMode.BLE -> bleService.sendData(data)
-            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+            ConnectionType.BLUETOOTH -> bleService.sendData(data)
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
         }
 
         _isSending.value = false
@@ -260,8 +260,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         val data = byteArrayOf(0xEE.toByte()) + stopData.toByteArray()
 
         when (_currentConnectionMode.value) {
-            ConnectionMode.BLE -> bleService.sendData(data)
-            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+            ConnectionType.BLUETOOTH -> bleService.sendData(data)
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
         }
 
         _isSending.value = false
@@ -289,8 +289,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
         if (_connectionStatus.value.isConnected) {
             when (_currentConnectionMode.value) {
-                ConnectionMode.BLE -> bleService.sendData(data)
-                ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+                ConnectionType.BLUETOOTH -> bleService.sendData(data)
+                ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
             }
         }
     }
@@ -321,8 +321,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         stopSending()
 
         when (_currentConnectionMode.value) {
-            ConnectionMode.BLE -> bleService.disconnect()
-            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+            ConnectionType.BLUETOOTH -> bleService.disconnect()
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
         }
     }
 
@@ -442,8 +442,8 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         udpDiscovery.stopDiscovery()
 
         when (_currentConnectionMode.value) {
-            ConnectionMode.BLE -> bleService.disconnect()
-            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+            ConnectionType.BLUETOOTH -> bleService.disconnect()
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
         }
     }
 }
