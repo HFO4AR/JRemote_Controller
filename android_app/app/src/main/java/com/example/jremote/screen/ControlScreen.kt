@@ -938,7 +938,8 @@ private fun ExpandableLogPanel(
             ) {
                 Text(
                     text = "滚动",
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Switch(
                     checked = autoScroll,

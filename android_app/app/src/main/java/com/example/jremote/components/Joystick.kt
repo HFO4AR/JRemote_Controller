@@ -173,9 +173,10 @@ private fun updateKnobPosition(
     val normalizedX = (knobX / outerRadius).coerceIn(-1f, 1f)
     val normalizedY = (knobY / outerRadius).coerceIn(-1f, 1f)
     
+    // 反转 Y 轴：往上推为正（前进），往下拉为负（后退）
     val state = JoystickState(
         x = normalizedX,
-        y = normalizedY,
+        y = -normalizedY,
         angle = ((angle * 180 / Math.PI).toFloat() + 360) % 360,
         distance = normalizedDistance.coerceIn(0f, 1f)
     )
