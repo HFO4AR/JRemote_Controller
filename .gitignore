@@ -73,3 +73,6 @@ makefile
 
 # Keystore files
 keystore/
+
+# Git worktrees
+.worktrees/
