@@ -43,7 +43,6 @@ class UdpDiscovery {
 
     private var socket: DatagramSocket? = null
     private var scanJob: Job? = null
-    private var isScanning = false
 
     // 响应回调
     private var onDeviceFound: ((DiscoveredDevice) -> Unit)? = null
@@ -55,7 +54,7 @@ class UdpDiscovery {
     fun startDiscovery(mode: ConnectionType) {
         if (_isScanning.value) return
 
-        isScanning = true
+        _isScanning.value = true
         _isScanning.value = true
         _discoveredDevices.value = emptyList()
 
@@ -68,7 +67,7 @@ class UdpDiscovery {
 
                     val buffer = ByteArray(1024)
 
-                    while (isActive && isScanning) {
+                    while (isActive && _isScanning.value) {
                         try {
                             val packet = DatagramPacket(buffer, buffer.size)
                             socket?.receive(packet)
@@ -129,7 +128,7 @@ class UdpDiscovery {
 
                 // 持续发送广播 5 秒
                 var count = 0
-                while (isScanning && count < 10) {
+                while (_isScanning.value && count < 10) {
                     delay(500)
                     count++
                 }
@@ -178,7 +177,7 @@ class UdpDiscovery {
     }
 
     fun stopDiscovery() {
-        isScanning = false
+        _isScanning.value = false
         scanJob?.cancel()
         socket?.close()
         socket = null
