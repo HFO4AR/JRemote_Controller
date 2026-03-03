@@ -17,20 +17,20 @@
  */
 
 #include <WiFi.h>
-#include <WiFiUDP.h>
+#include <WiFiUdp.h>
 
 // ==================== 配置 ====================
 
 // 选择运行模式: true = AP 模式, false = Station 模式
-const bool USE_AP_MODE = true;
+const bool USE_AP_MODE = false;
 
 // AP 模式配置
 const char* AP_SSID = "JRemote_ESP32";
 const char* AP_PASSWORD = "12345678";
 
 // Station 模式配置 (请根据您的网络修改)
-const char* STA_SSID = "Your_WiFi_SSID";
-const char* STA_PASSWORD = "Your_WiFi_Password";
+const char* STA_SSID = "kim";
+const char* STA_PASSWORD = "woshidashabi666!";
 
 // 设备名称
 const char* DEVICE_NAME = "ESP32_JRemote";
