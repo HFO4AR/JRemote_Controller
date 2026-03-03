@@ -21,7 +21,7 @@ import com.example.jremote.data.ThemeMode
 private val DeepBlueDarkColorScheme = darkColorScheme(
     primary = Color(0xFF64B5F6),
     onPrimary = Color(0xFF003258),
-    primaryContainer = Color(0xFF0D47A1),
+    primaryContainer = Color(0xFF02132A),
     onPrimaryContainer = Color(0xFFD1E4FF),
 
     secondary = Color(0xFF80CBC4),

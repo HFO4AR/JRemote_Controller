@@ -19,9 +19,13 @@ import com.example.jremote.wifi.UdpDiscovery
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ControlViewModel(application: Application) : AndroidViewModel(application) {
@@ -75,8 +79,26 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     private val _isEmergencyStopped = MutableStateFlow(false)
     val isEmergencyStopped: StateFlow<Boolean> = _isEmergencyStopped.asStateFlow()
 
-    val rssi: StateFlow<Int?> = bleService.rssi
-    val latency: StateFlow<Int?> = bleService.latency
+    // 根据连接模式返回延迟和信号强度
+    val rssi: StateFlow<Int?> by lazy {
+        combine(_connectionStatus, bleService.rssi, wifiService.wifiRssi) { status, bleRssi, wifiRssi ->
+            when (status.connectionType) {
+                ConnectionType.BLUETOOTH -> bleRssi
+                ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiRssi
+                ConnectionType.USB -> null
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }
+
+    val latency: StateFlow<Int?> by lazy {
+        combine(_connectionStatus, bleService.latency, wifiService.latency) { status, bleLatency, wifiLatency ->
+            when (status.connectionType) {
+                ConnectionType.BLUETOOTH -> bleLatency
+                ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiLatency
+                ConnectionType.USB -> null
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }
 
     private var sendJob: Job? = null
     private var reconnectJob: Job? = null
@@ -121,7 +143,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             bleService.debugMessages.collect { messages ->
-                _debugMessages.value = messages
+                _debugMessages.value = (messages + wifiService.debugMessages.value).takeLast(1000)
             }
         }
 
@@ -138,7 +160,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             wifiService.debugMessages.collect { messages ->
-                _debugMessages.value = messages
+                _debugMessages.value = (bleService.debugMessages.value + messages).takeLast(1000)
             }
         }
     }

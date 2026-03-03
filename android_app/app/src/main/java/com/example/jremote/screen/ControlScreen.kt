@@ -374,14 +374,6 @@ private fun SignalStrengthIcon(rssi: Int) {
             )
         }
     }
-
-    // 显示 RSSI 数值
-    Text(
-        text = "${rssi}dBm",
-        color = signalColor,
-        fontSize = 10.sp,
-        modifier = Modifier.padding(start = 4.dp)
-    )
 }
 
 @Composable
@@ -982,10 +974,12 @@ private fun ExpandableLogPanel(
                 reverseLayout = false
             ) {
                 items(debugMessages) { message ->
-                    val logColor = when (message.level) {
-                        DebugLevel.ERROR -> MaterialTheme.colorScheme.error
-                        DebugLevel.WARNING -> MaterialTheme.colorScheme.tertiary
-                        DebugLevel.INFO -> MaterialTheme.colorScheme.primary
+                    // MUC 消息使用特殊颜色（绿色），其他消息根据级别着色
+                    val logColor = when {
+                        message.tag == "MUC" -> Color(0xFF4CAF50)  // 绿色表示来自 ESP32
+                        message.level == DebugLevel.ERROR -> MaterialTheme.colorScheme.error
+                        message.level == DebugLevel.WARNING -> MaterialTheme.colorScheme.tertiary
+                        message.level == DebugLevel.INFO -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                     val timeStr = java.text.SimpleDateFormat(

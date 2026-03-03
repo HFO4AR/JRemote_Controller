@@ -29,8 +29,8 @@ const char* AP_SSID = "JRemote_ESP32";
 const char* AP_PASSWORD = "12345678";
 
 // Station 模式配置 (请根据您的网络修改)
-const char* STA_SSID = "kim";
-const char* STA_PASSWORD = "woshidashabi666!";
+const char* STA_SSID = "";
+const char* STA_PASSWORD = "";
 
 // 设备名称
 const char* DEVICE_NAME = "ESP32_JRemote";
@@ -46,6 +46,10 @@ WiFiUDP discoveryUdp;
 
 bool isConnected = false;
 unsigned long lastDataTime = 0;
+unsigned long lastHelloTime = 0;
+
+// 手机IP地址
+IPAddress phoneIP;
 
 // 摇杆数据
 int leftJoystickX = 0;
@@ -104,6 +108,17 @@ void loop() {
 
     // 处理设备发现请求
     handleDiscovery();
+
+    // 每秒发送一次 Hello 消息
+    if (isConnected && (millis() - lastHelloTime >= 1000)) {
+        lastHelloTime = millis();
+
+        dataUdp.beginPacket(phoneIP, DATA_PORT);
+        dataUdp.write((const uint8_t*)"Hello", 5);  // 发送 "Hello" + 结束符
+        dataUdp.endPacket();
+
+        Serial.println("发送 Hello 到手机");
+    }
 
     // 检查连接超时 (5秒无数据视为断开)
     if (isConnected && (millis() - lastDataTime > 5000)) {
@@ -177,18 +192,22 @@ void handleData() {
         IPAddress remoteIP = dataUdp.remoteIP();
         int remotePort = dataUdp.remotePort();
 
+        // 保存手机IP
+        phoneIP = remoteIP;
+
         uint8_t packetBuffer[64];
         int len = dataUdp.read(packetBuffer, sizeof(packetBuffer) - 1);
 
         if (len > 0) {
             packetBuffer[len] = 0;
 
+            // 每次收到数据都发送响应
+            dataUdp.beginPacket(remoteIP, remotePort);
+            dataUdp.write(0x50);  // 'P' 响应
+            dataUdp.endPacket();
+
             // 检查是否是 ping 请求 (0x70)
             if (len == 1 && packetBuffer[0] == 0x70) {
-                // 响应 ping
-                dataUdp.beginPacket(remoteIP, remotePort);
-                dataUdp.write(0x50);  // 'P'
-                dataUdp.endPacket();
                 Serial.println("收到 Ping, 发送响应");
             } else {
                 // 处理控制数据
