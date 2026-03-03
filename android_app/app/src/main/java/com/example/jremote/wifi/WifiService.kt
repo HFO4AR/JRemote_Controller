@@ -76,7 +76,7 @@ class WifiService(private val application: Application) {
                     isConnected = true,
                     deviceName = device.name,
                     deviceAddress = device.ip,
-                    connectionType = ConnectionType.WIFI,
+                    connectionType = device.connectionType,
                     signalStrength = 0
                 )
                 startPingLoop()
