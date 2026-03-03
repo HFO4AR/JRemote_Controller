@@ -395,14 +395,6 @@ private fun BleDeviceList(
                 )
             }
         }
-
-        ScanButton(
-            isScanning = isScanning,
-            deviceCount = scannedDevices.size,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
-            isConnected = isConnected
-        )
         }
     }
 }
@@ -460,14 +452,6 @@ private fun WifiDeviceList(
                 )
             }
         }
-
-        ScanButton(
-            isScanning = isScanning,
-            deviceCount = devices.size,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
-            isConnected = isConnected
-        )
         }
     }
 }
@@ -531,71 +515,6 @@ private fun EmptyDeviceList(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Button(
-            onClick = { if (isScanning) onStopScan() else onStartScan() },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isConnected
-        ) {
-            if (isScanning) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("停止扫描")
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("重新扫描")
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScanButton(
-    isScanning: Boolean,
-    deviceCount: Int,
-    onStartScan: () -> Unit,
-    onStopScan: () -> Unit,
-    isConnected: Boolean
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (deviceCount == 0)
-                    "点击下方按钮开始扫描"
-                else
-                    "发现 $deviceCount 个设备",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (isScanning) {
-                Text(
-                    text = "扫描中...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
