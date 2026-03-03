@@ -192,6 +192,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             when (_currentConnectionMode.value) {
                 ConnectionType.BLUETOOTH -> bleService.disconnect()
                 ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
+                ConnectionType.USB -> { /* USB 暂不支持 */ }
             }
         }
         _currentConnectionMode.value = mode
@@ -242,6 +243,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.sendData(data)
             ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
+            ConnectionType.USB -> { /* USB 暂不支持 */ }
         }
 
         _isSending.value = false
@@ -262,6 +264,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.sendData(data)
             ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
+            ConnectionType.USB -> { /* USB 暂不支持 */ }
         }
 
         _isSending.value = false
@@ -291,6 +294,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             when (_currentConnectionMode.value) {
                 ConnectionType.BLUETOOTH -> bleService.sendData(data)
                 ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(data)
+                ConnectionType.USB -> { /* USB 暂不支持 */ }
             }
         }
     }
@@ -323,6 +327,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.disconnect()
             ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
+            ConnectionType.USB -> { /* USB 暂不支持 */ }
         }
     }
 
@@ -444,6 +449,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.disconnect()
             ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.disconnect()
+            ConnectionType.USB -> { /* USB 暂不支持 */ }
         }
     }
 }
