@@ -40,6 +40,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -299,7 +300,8 @@ fun ConnectionScreen(
                                 onConnect(address)
                             },
                             onStartScan = onStartScan,
-                            onStopScan = onStopScan
+                            onStopScan = onStopScan,
+                            onRefresh = onStartScan
                         )
                     }
                     ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> {
@@ -315,7 +317,8 @@ fun ConnectionScreen(
                                 onConnectWifiDevice(device)
                             },
                             onStartScan = { onStartWifiScan(currentConnectionMode) },
-                            onStopScan = onStopWifiScan
+                            onStopScan = onStopWifiScan,
+                            onRefresh = { onStartWifiScan(currentConnectionMode) }
                         )
                     }
                     ConnectionType.USB -> {
@@ -337,6 +340,7 @@ fun ConnectionScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BleDeviceList(
     scannedDevices: List<BluetoothDevice>,
@@ -346,27 +350,33 @@ private fun BleDeviceList(
     connectingAddress: String?,
     onConnect: (String) -> Unit,
     onStartScan: () -> Unit,
-    onStopScan: () -> Unit
+    onStopScan: () -> Unit,
+    onRefresh: () -> Unit
 ) {
-    if (scannedDevices.isEmpty()) {
-        EmptyDeviceList(
-            isScanning = isScanning,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
-            isConnected = isConnected
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(
-                items = scannedDevices,
-                key = { it.address }
-            ) { device ->
+    PullToRefreshBox(
+        isRefreshing = isScanning,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        if (scannedDevices.isEmpty()) {
+            EmptyDeviceList(
+                isScanning = isScanning,
+                onStartScan = onStartScan,
+                onStopScan = onStopScan,
+                isConnected = isConnected
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = scannedDevices,
+                    key = { it.address }
+                ) { device ->
                 val isThisDeviceConnecting = connectingAddress == device.address
                 val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
                 val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
@@ -393,9 +403,11 @@ private fun BleDeviceList(
             onStopScan = onStopScan,
             isConnected = isConnected
         )
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WifiDeviceList(
     devices: List<DiscoveredDevice>,
@@ -406,16 +418,22 @@ private fun WifiDeviceList(
     connectingAddress: String?,
     onConnect: (DiscoveredDevice) -> Unit,
     onStartScan: () -> Unit,
-    onStopScan: () -> Unit
+    onStopScan: () -> Unit,
+    onRefresh: () -> Unit
 ) {
-    if (devices.isEmpty()) {
-        EmptyDeviceList(
-            isScanning = isScanning,
-            onStartScan = onStartScan,
-            onStopScan = onStopScan,
-            isConnected = isConnected
-        )
-    } else {
+    PullToRefreshBox(
+        isRefreshing = isScanning,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        if (devices.isEmpty()) {
+            EmptyDeviceList(
+                isScanning = isScanning,
+                onStartScan = onStartScan,
+                onStopScan = onStopScan,
+                isConnected = isConnected
+            )
+        } else {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -450,6 +468,7 @@ private fun WifiDeviceList(
             onStopScan = onStopScan,
             isConnected = isConnected
         )
+        }
     }
 }
 
