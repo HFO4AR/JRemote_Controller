@@ -6,12 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.example.jremote.bluetooth.BleService
 import com.example.jremote.data.AppSettings
 import com.example.jremote.data.ButtonConfig
+import com.example.jremote.data.ConnectionMode
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.ControlData
 import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
+import com.example.jremote.data.DiscoveredDevice
 import com.example.jremote.data.JoystickState
 import com.example.jremote.data.SettingsRepository
+import com.example.jremote.wifi.WifiService
+import com.example.jremote.wifi.UdpDiscovery
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +25,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class ControlViewModel(application: Application) : AndroidViewModel(application) {
-    
+
     private val bleService = BleService(application)
+    private val wifiService = WifiService(application)
+    private val udpDiscovery = UdpDiscovery()
     private val settingsRepository = SettingsRepository(application)
     
     private val _leftJoystickState = MutableStateFlow(JoystickState())
@@ -83,6 +89,13 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     val scannedDevices = bleService.scannedDevices
     val isScanning = bleService.isScanning
 
+    private val _currentConnectionMode = MutableStateFlow(ConnectionMode.BLE)
+    val currentConnectionMode: StateFlow<ConnectionMode> = _currentConnectionMode.asStateFlow()
+
+    val wifiScannedDevices = udpDiscovery.discoveredDevices
+    val isWifiScanning = udpDiscovery.isScanning
+    val wifiLatency = wifiService.latency
+
     init {
         viewModelScope.launch {
             settingsRepository.appSettings.collect { settings ->
@@ -111,6 +124,23 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
                 _debugMessages.value = messages
             }
         }
+
+        viewModelScope.launch {
+            wifiService.connectionStatus.collect { status ->
+                // 检测连接断开事件
+                if (previousConnectionStatus && !status.isConnected) {
+                    onConnectionLost()
+                }
+                previousConnectionStatus = status.isConnected
+                _connectionStatus.value = status
+            }
+        }
+
+        viewModelScope.launch {
+            wifiService.debugMessages.collect { messages ->
+                _debugMessages.value = messages
+            }
+        }
     }
     
     private suspend fun loadButtonConfigs() {
@@ -128,6 +158,49 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     
     fun stopBleScan() {
         bleService.stopBleScan()
+    }
+
+    fun startWifiDiscovery(mode: ConnectionMode) {
+        udpDiscovery.startDiscovery(mode)
+    }
+
+    fun stopWifiDiscovery() {
+        udpDiscovery.stopDiscovery()
+    }
+
+    fun connectToWifiDevice(device: DiscoveredDevice) {
+        viewModelScope.launch {
+            // 保存最后连接的设备信息
+            val newSettings = _settings.value.copy(
+                lastConnectionMode = ConnectionMode.LAN,
+                lastConnectedDeviceIp = device.ip
+            )
+            settingsRepository.updateAppSettings(newSettings)
+
+            wifiService.connect(device)
+        }
+    }
+
+    fun disconnectWifi() {
+        stopSending()
+        wifiService.disconnect()
+    }
+
+    fun setConnectionMode(mode: ConnectionMode) {
+        // 如果当前已连接，先断开
+        if (_connectionStatus.value.isConnected) {
+            when (_currentConnectionMode.value) {
+                ConnectionMode.BLE -> bleService.disconnect()
+                ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+            }
+        }
+        _currentConnectionMode.value = mode
+
+        // 保存模式到设置
+        viewModelScope.launch {
+            val newSettings = _settings.value.copy(lastConnectionMode = mode)
+            settingsRepository.updateAppSettings(newSettings)
+        }
     }
     
     fun updateLeftJoystick(state: JoystickState) {
@@ -165,7 +238,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             buttons = emptyMap()
         )
         val data = byteArrayOf(0xAA.toByte()) + stopData.toByteArray()
-        bleService.sendData(data)
+
+        when (_currentConnectionMode.value) {
+            ConnectionMode.BLE -> bleService.sendData(data)
+            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+        }
+
         _isSending.value = false
         _isInControlMode.value = false
         _isEmergencyStopped.value = false
@@ -180,7 +258,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             buttons = emptyMap()
         )
         val data = byteArrayOf(0xEE.toByte()) + stopData.toByteArray()
-        bleService.sendData(data)
+
+        when (_currentConnectionMode.value) {
+            ConnectionMode.BLE -> bleService.sendData(data)
+            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+        }
+
         _isSending.value = false
         _isEmergencyStopped.value = true
         sendJob?.cancel()
@@ -201,11 +284,14 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             rightJoystick = _rightJoystickState.value,
             buttons = _buttonStates.value
         )
-        
+
         val data = byteArrayOf(0xAA.toByte()) + controlData.toByteArray()
-        
+
         if (_connectionStatus.value.isConnected) {
-            bleService.sendData(data)
+            when (_currentConnectionMode.value) {
+                ConnectionMode.BLE -> bleService.sendData(data)
+                ConnectionMode.AP, ConnectionMode.LAN -> wifiService.sendData(data)
+            }
         }
     }
     
@@ -233,7 +319,11 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         reconnectJob?.cancel()
         reconnectJob = null
         stopSending()
-        bleService.disconnect()
+
+        when (_currentConnectionMode.value) {
+            ConnectionMode.BLE -> bleService.disconnect()
+            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+        }
     }
 
     private fun onConnectionLost() {
@@ -349,6 +439,11 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         super.onCleared()
         stopSending()
-        bleService.disconnect()
+        udpDiscovery.stopDiscovery()
+
+        when (_currentConnectionMode.value) {
+            ConnectionMode.BLE -> bleService.disconnect()
+            ConnectionMode.AP, ConnectionMode.LAN -> wifiService.disconnect()
+        }
     }
 }
