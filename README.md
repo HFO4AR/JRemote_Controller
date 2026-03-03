@@ -58,14 +58,12 @@ JRemote_Controller/
 
 ### 2. 安装 Android 应用
 
-1. 打开 `android_app/` 目录
-2. 使用 Android Studio 打开项目
-3. 构建并安装应用到您的 Android 设备
+前往 [Releases](https://github.com/your-repo/JRemote_Controller/releases) 页面下载最新版本的 APK 文件，直接安装到您的 Android 设备上。
 
 ### 3. 连接设备
 
 1. 打开 JRemote Controller 应用
-2. 点击 "连接" 按钮
+2. 点击顶部连接按钮进入蓝牙扫描界面
 3. 扫描并选择您的 ESP32 设备
 4. 等待连接成功
 
