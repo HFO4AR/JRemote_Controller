@@ -61,7 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.example.jremote.data.ConnectionMode
+import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DiscoveredDevice
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +72,7 @@ fun ConnectionScreen(
     isScanning: Boolean,
     isConnected: Boolean,
     connectedDeviceName: String,
-    currentConnectionMode: ConnectionMode,
+    currentConnectionMode: ConnectionType,
     wifiScannedDevices: List<DiscoveredDevice>,
     isWifiScanning: Boolean,
     onConnect: (String) -> Unit,
@@ -80,10 +80,10 @@ fun ConnectionScreen(
     onRemoveBond: (String) -> Unit,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
-    onStartWifiScan: (ConnectionMode) -> Unit,
+    onStartWifiScan: (ConnectionType) -> Unit,
     onStopWifiScan: () -> Unit,
     onConnectWifiDevice: (DiscoveredDevice) -> Unit,
-    onSetConnectionMode: (ConnectionMode) -> Unit,
+    onSetConnectionMode: (ConnectionType) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -134,8 +134,8 @@ fun ConnectionScreen(
     LaunchedEffect(hasPermissions, currentConnectionMode) {
         if (hasPermissions && !isConnected) {
             when (currentConnectionMode) {
-                ConnectionMode.BLE -> onStartScan()
-                ConnectionMode.AP, ConnectionMode.LAN -> onStartWifiScan(currentConnectionMode)
+                ConnectionType.BLUETOOTH -> onStartScan()
+                ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> onStartWifiScan(currentConnectionMode)
             }
         }
     }
@@ -152,9 +152,9 @@ fun ConnectionScreen(
                         if (isConnected) {
                             Text(
                                 text = when (currentConnectionMode) {
-                                    ConnectionMode.BLE -> "蓝牙"
-                                    ConnectionMode.AP -> "Wi-Fi AP"
-                                    ConnectionMode.LAN -> "Wi-Fi 局域网"
+                                    ConnectionType.BLUETOOTH -> "蓝牙"
+                                    ConnectionType.WIFI_AP -> "Wi-Fi AP"
+                                    ConnectionType.WIFI_LAN -> "Wi-Fi 局域网"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,8 +176,8 @@ fun ConnectionScreen(
                         TextButton(onClick = { showModeMenu = true }) {
                             Icon(
                                 imageVector = when (currentConnectionMode) {
-                                    ConnectionMode.BLE -> Icons.Default.Bluetooth
-                                    ConnectionMode.AP, ConnectionMode.LAN -> Icons.Default.Wifi
+                                    ConnectionType.BLUETOOTH -> Icons.Default.Bluetooth
+                                    ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> Icons.Default.Wifi
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
@@ -185,9 +185,9 @@ fun ConnectionScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = when (currentConnectionMode) {
-                                    ConnectionMode.BLE -> "蓝牙"
-                                    ConnectionMode.AP -> "AP"
-                                    ConnectionMode.LAN -> "局域网"
+                                    ConnectionType.BLUETOOTH -> "蓝牙"
+                                    ConnectionType.WIFI_AP -> "AP"
+                                    ConnectionType.WIFI_LAN -> "局域网"
                                 }
                             )
                         }
@@ -199,7 +199,7 @@ fun ConnectionScreen(
                             DropdownMenuItem(
                                 text = { Text("蓝牙模式") },
                                 onClick = {
-                                    onSetConnectionMode(ConnectionMode.BLE)
+                                    onSetConnectionMode(ConnectionType.BLUETOOTH)
                                     showModeMenu = false
                                 },
                                 leadingIcon = {
@@ -209,7 +209,7 @@ fun ConnectionScreen(
                             DropdownMenuItem(
                                 text = { Text("AP 模式（Wi-Fi 直连）") },
                                 onClick = {
-                                    onSetConnectionMode(ConnectionMode.AP)
+                                    onSetConnectionMode(ConnectionType.WIFI_AP)
                                     showModeMenu = false
                                 },
                                 leadingIcon = {
@@ -219,7 +219,7 @@ fun ConnectionScreen(
                             DropdownMenuItem(
                                 text = { Text("局域网模式（Wi-Fi）") },
                                 onClick = {
-                                    onSetConnectionMode(ConnectionMode.LAN)
+                                    onSetConnectionMode(ConnectionType.WIFI_LAN)
                                     showModeMenu = false
                                 },
                                 leadingIcon = {
@@ -283,7 +283,7 @@ fun ConnectionScreen(
             } else {
                 // 根据模式显示不同的设备列表
                 when (currentConnectionMode) {
-                    ConnectionMode.BLE -> {
+                    ConnectionType.BLUETOOTH -> {
                         BleDeviceList(
                             scannedDevices = scannedDevices,
                             isScanning = isScanning,
@@ -298,7 +298,7 @@ fun ConnectionScreen(
                             onStopScan = onStopScan
                         )
                     }
-                    ConnectionMode.AP, ConnectionMode.LAN -> {
+                    ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> {
                         WifiDeviceList(
                             devices = wifiScannedDevices,
                             isScanning = isWifiScanning,
@@ -385,7 +385,7 @@ private fun WifiDeviceList(
     isScanning: Boolean,
     isConnected: Boolean,
     connectedDeviceName: String,
-    mode: ConnectionMode,
+    mode: ConnectionType,
     connectingAddress: String?,
     onConnect: (DiscoveredDevice) -> Unit,
     onStartScan: () -> Unit,

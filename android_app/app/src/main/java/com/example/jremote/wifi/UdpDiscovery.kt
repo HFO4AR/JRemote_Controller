@@ -1,7 +1,7 @@
 package com.example.jremote.wifi
 
 import android.util.Log
-import com.example.jremote.data.ConnectionMode
+import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.DiscoveredDevice
@@ -52,7 +52,7 @@ class UdpDiscovery {
         onDeviceFound = callback
     }
 
-    fun startDiscovery(mode: ConnectionMode) {
+    fun startDiscovery(mode: ConnectionType) {
         if (_isScanning.value) return
 
         isScanning = true
@@ -140,7 +140,7 @@ class UdpDiscovery {
         }
     }
 
-    private fun parseDeviceResponse(data: String, address: String, mode: ConnectionMode) {
+    private fun parseDeviceResponse(data: String, address: String, mode: ConnectionType) {
         try {
             // 格式: JREMOTE:{设备名称}:{IP}:{端口}
             val parts = data.split(":")
@@ -154,7 +154,7 @@ class UdpDiscovery {
                     address = ip,
                     ip = ip,
                     port = port,
-                    mode = mode,
+                    connectionType = mode,
                     rssi = 0
                 )
 

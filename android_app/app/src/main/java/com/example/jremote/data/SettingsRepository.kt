@@ -36,11 +36,11 @@ class SettingsRepository(private val context: Context) {
     }
     
     val appSettings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
-        val lastConnectionModeStr = context.dataStore.data.first()[Keys.LAST_CONNECTION_MODE] ?: "BLE"
+        val lastConnectionModeStr = context.dataStore.data.first()[Keys.LAST_CONNECTION_MODE] ?: "BLUETOOTH"
         val lastConnectionMode = try {
-            ConnectionMode.valueOf(lastConnectionModeStr)
+            ConnectionType.valueOf(lastConnectionModeStr)
         } catch (e: Exception) {
-            ConnectionMode.BLE
+            ConnectionType.BLUETOOTH
         }
         val lastConnectedDeviceIp = context.dataStore.data.first()[Keys.LAST_CONNECTED_DEVICE_IP]
 
