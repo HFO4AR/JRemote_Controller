@@ -40,7 +40,14 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pullrefresh.PullRefreshIndicator
+import androidx.compose.foundation.pullrefresh.pullRefresh
+import androidx.compose.foundation.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -353,6 +360,11 @@ private fun BleDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isScanning,
+        onRefresh = onRefresh
+    )
+
     if (scannedDevices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
@@ -361,19 +373,16 @@ private fun BleDeviceList(
             isConnected = isConnected
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullRefresh(pullRefreshState)
         ) {
-            // 下拉刷新
-            item {
-                PullToRefreshContainer(
-                    isRefreshing = isScanning,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             items(
                 items = scannedDevices,
                 key = { it.address }
@@ -395,6 +404,13 @@ private fun BleDeviceList(
                     }
                 )
             }
+            }
+
+            PullRefreshIndicator(
+                refreshing = isScanning,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }
@@ -413,6 +429,11 @@ private fun WifiDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isScanning,
+        onRefresh = onRefresh
+    )
+
     if (devices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
@@ -421,19 +442,16 @@ private fun WifiDeviceList(
             isConnected = isConnected
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullRefresh(pullRefreshState)
         ) {
-            // 下拉刷新
-            item {
-                PullToRefreshContainer(
-                    isRefreshing = isScanning,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             items(
                 items = devices,
                 key = { it.ip }
@@ -452,6 +470,13 @@ private fun WifiDeviceList(
                     }
                 )
             }
+            }
+
+            PullRefreshIndicator(
+                refreshing = isScanning,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }
