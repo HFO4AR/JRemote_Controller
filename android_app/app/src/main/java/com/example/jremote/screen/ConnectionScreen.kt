@@ -40,9 +40,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.foundation.pullrefresh.PullRefreshIndicator
-import androidx.compose.foundation.pullrefresh.pullRefresh
-import androidx.compose.foundation.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +48,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -355,11 +354,6 @@ private fun BleDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = isScanning,
-        onRefresh = onRefresh
-    )
-
     if (scannedDevices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
@@ -368,44 +362,38 @@ private fun BleDeviceList(
             isConnected = isConnected
         )
     } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pullRefresh(pullRefreshState)
+        PullToRefreshBox(
+            isRefreshing = isScanning,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-            items(
-                items = scannedDevices,
-                key = { it.address }
-            ) { device ->
-                val isThisDeviceConnecting = connectingAddress == device.address
-                val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
-                val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
+                items(
+                    items = scannedDevices,
+                    key = { it.address }
+                ) { device ->
+                    val isThisDeviceConnecting = connectingAddress == device.address
+                    val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
+                    val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
 
-                DeviceCard(
-                    deviceName = device.name ?: "未知设备",
-                    deviceAddress = device.address,
-                    isConnected = isThisDeviceConnected,
-                    isConnecting = isThisDeviceConnecting,
-                    isBonded = isBonded,
-                    onClick = {
-                        if (!isConnected && connectingAddress == null) {
-                            onConnect(device.address)
+                    DeviceCard(
+                        deviceName = device.name ?: "未知设备",
+                        deviceAddress = device.address,
+                        isConnected = isThisDeviceConnected,
+                        isConnecting = isThisDeviceConnecting,
+                        isBonded = isBonded,
+                        onClick = {
+                            if (!isConnected && connectingAddress == null) {
+                                onConnect(device.address)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
-            }
-
-            PullRefreshIndicator(
-                refreshing = isScanning,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
 }
@@ -424,11 +412,6 @@ private fun WifiDeviceList(
     onStopScan: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = isScanning,
-        onRefresh = onRefresh
-    )
-
     if (devices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
@@ -437,41 +420,35 @@ private fun WifiDeviceList(
             isConnected = isConnected
         )
     } else {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pullRefresh(pullRefreshState)
+        PullToRefreshBox(
+            isRefreshing = isScanning,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-            items(
-                items = devices,
-                key = { it.ip }
-            ) { device ->
-                val isThisDeviceConnecting = connectingAddress == device.ip
-                val isThisDeviceConnected = isConnected && connectedDeviceName == device.name
+                items(
+                    items = devices,
+                    key = { it.ip }
+                ) { device ->
+                    val isThisDeviceConnecting = connectingAddress == device.ip
+                    val isThisDeviceConnected = isConnected && connectedDeviceName == device.name
 
-                WifiDeviceCard(
-                    device = device,
-                    isConnected = isThisDeviceConnected,
-                    isConnecting = isThisDeviceConnecting,
-                    onClick = {
-                        if (!isConnected && connectingAddress == null) {
-                            onConnect(device)
+                    WifiDeviceCard(
+                        device = device,
+                        isConnected = isThisDeviceConnected,
+                        isConnecting = isThisDeviceConnecting,
+                        onClick = {
+                            if (!isConnected && connectingAddress == null) {
+                                onConnect(device)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
-            }
-
-            PullRefreshIndicator(
-                refreshing = isScanning,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
 }
