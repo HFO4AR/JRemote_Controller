@@ -136,6 +136,7 @@ fun ConnectionScreen(
             when (currentConnectionMode) {
                 ConnectionType.BLUETOOTH -> onStartScan()
                 ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> onStartWifiScan(currentConnectionMode)
+                ConnectionType.USB -> { /* USB 模式暂不支持扫描 */ }
             }
         }
     }
@@ -155,6 +156,7 @@ fun ConnectionScreen(
                                     ConnectionType.BLUETOOTH -> "蓝牙"
                                     ConnectionType.WIFI_AP -> "Wi-Fi AP"
                                     ConnectionType.WIFI_LAN -> "Wi-Fi 局域网"
+                                    ConnectionType.USB -> "USB"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -178,6 +180,7 @@ fun ConnectionScreen(
                                 imageVector = when (currentConnectionMode) {
                                     ConnectionType.BLUETOOTH -> Icons.Default.Bluetooth
                                     ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> Icons.Default.Wifi
+                                    ConnectionType.USB -> Icons.Default.Wifi
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
@@ -188,6 +191,7 @@ fun ConnectionScreen(
                                     ConnectionType.BLUETOOTH -> "蓝牙"
                                     ConnectionType.WIFI_AP -> "AP"
                                     ConnectionType.WIFI_LAN -> "局域网"
+                                    ConnectionType.USB -> "USB"
                                 }
                             )
                         }
@@ -313,6 +317,19 @@ fun ConnectionScreen(
                             onStartScan = { onStartWifiScan(currentConnectionMode) },
                             onStopScan = onStopWifiScan
                         )
+                    }
+                    ConnectionType.USB -> {
+                        // USB 模式暂不支持
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "USB 模式暂不支持",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
