@@ -29,6 +29,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
@@ -65,7 +66,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A2A))
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         Row(
@@ -80,12 +81,12 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "返回",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
                     text = "设置",
-                    color = Color.White,
+                    color=MaterialTheme.colorScheme.onSurface,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -103,7 +104,7 @@ fun SettingsScreen(
                 SettingsSection(title = "数据发送")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A3A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -112,10 +113,10 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("发送间隔", color = Color.White, fontSize = 14.sp)
+                            Text("发送间隔", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                             Text(
                                 "${settings.sendIntervalMs}ms",
-                                color = Color(0xFF4A90D9),
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -128,15 +129,15 @@ fun SettingsScreen(
                             valueRange = 10f..100f,
                             steps = 9,
                             colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFF4A90D9),
-                                activeTrackColor = Color(0xFF4A90D9),
-                                inactiveTrackColor = Color(0xFF3A3A4A)
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
                             "较低间隔可提高响应速度，但会增加功耗",
-                            color = Color(0xFF888888),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
@@ -147,7 +148,7 @@ fun SettingsScreen(
                 SettingsSection(title = "界面设置")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A3A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -167,7 +168,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             "切换按钮布局",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -178,24 +179,76 @@ fun SettingsScreen(
                             Button(
                                 onClick = { onUpdateSettings(settings.copy(toggleButtonLayout = ToggleButtonLayout.HORIZONTAL)) },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.HORIZONTAL) 
-                                        Color(0xFF4A90D9) else Color(0xFF3A3A4A)
+                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.HORIZONTAL)
+                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("一字排开", fontSize = 12.sp)
+                                Text("一字排开", color=MaterialTheme.colorScheme.onSurface,fontSize = 12.sp)
                             }
                             Button(
                                 onClick = { onUpdateSettings(settings.copy(toggleButtonLayout = ToggleButtonLayout.GRID_2X2)) },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.GRID_2X2) 
-                                        Color(0xFF4A90D9) else Color(0xFF3A3A4A)
+                                    containerColor = if (settings.toggleButtonLayout == ToggleButtonLayout.GRID_2X2)
+                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("2x2 网格", fontSize = 12.sp)
+                                Text("2x2 网格", color=MaterialTheme.colorScheme.onSurface,fontSize = 12.sp)
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            "主题模式",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onUpdateSettings(settings.copy(themeMode = com.example.jremote.data.ThemeMode.SYSTEM)) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (settings.themeMode == com.example.jremote.data.ThemeMode.SYSTEM)
+                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("跟随系统", color=MaterialTheme.colorScheme.onSurface,fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { onUpdateSettings(settings.copy(themeMode = com.example.jremote.data.ThemeMode.DARK)) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (settings.themeMode == com.example.jremote.data.ThemeMode.DARK)
+                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("深色", color=MaterialTheme.colorScheme.onSurface,fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = { onUpdateSettings(settings.copy(themeMode = com.example.jremote.data.ThemeMode.LIGHT)) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (settings.themeMode == com.example.jremote.data.ThemeMode.LIGHT)
+                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("浅色", color=MaterialTheme.colorScheme.onSurface,fontSize = 12.sp)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SettingSwitch(
+                            title = "跟随主题色",
+                            description = "跟随手机壁纸颜色（仅 Android 12+）",
+                            checked = settings.dynamicColor,
+                            onCheckedChange = { onUpdateSettings(settings.copy(dynamicColor = it)) }
+                        )
                     }
                 }
             }
@@ -204,7 +257,7 @@ fun SettingsScreen(
                 SettingsSection(title = "蓝牙设置")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A3A)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -257,7 +310,7 @@ fun SettingsScreen(
 private fun SettingsSection(title: String) {
     Text(
         text = title,
-        color = Color(0xFF888888),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(vertical = 8.dp)
@@ -277,17 +330,17 @@ private fun SettingSwitch(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 14.sp)
-            Text(description, color = Color(0xFF888888), fontSize = 12.sp)
+            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF4A90D9),
-                checkedTrackColor = Color(0xFF4A90D9).copy(alpha = 0.5f),
-                uncheckedThumbColor = Color(0xFF888888),
-                uncheckedTrackColor = Color(0xFF3A3A4A)
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
     }
@@ -305,7 +358,7 @@ private fun ButtonConfigItem(
             .fillMaxWidth()
             .clickable { onEdit() },
         colors = CardDefaults.cardColors(
-            containerColor = if (config.isEnabled) Color(0xFF2A2A3A) else Color(0xFF1A1A2A)
+            containerColor = if (config.isEnabled) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -322,9 +375,9 @@ private fun ButtonConfigItem(
                         modifier = Modifier
                             .background(
                                 when {
-                                    !config.isEnabled -> Color(0xFF555555)
-                                    config.isToggle -> Color(0xFF2E7D32)
-                                    else -> Color(0xFF4A90D9)
+                                    !config.isEnabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    config.isToggle -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.primary
                                 },
                                 shape = RoundedCornerShape(4.dp)
                             )
@@ -332,7 +385,7 @@ private fun ButtonConfigItem(
                     ) {
                         Text(
                             text = config.name,
-                            color = if (config.isEnabled) Color.White else Color(0xFF888888),
+                            color = if (config.isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -342,7 +395,7 @@ private fun ButtonConfigItem(
                     
                     Text(
                         text = "KeyCode: 0x${config.keyCode.toString(16).uppercase()}",
-                        color = if (config.isEnabled) Color(0xFF888888) else Color(0xFF555555),
+                        color = if (config.isEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         fontSize = 12.sp
                     )
                 }
@@ -357,13 +410,13 @@ private fun ButtonConfigItem(
                         onCheckedChange = { onToggleMode() },
                         enabled = config.isEnabled,
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Color(0xFF4A90D9),
-                            uncheckedColor = Color(0xFF888888)
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                     Text(
                         text = "切换模式",
-                        color = if (config.isEnabled) Color(0xFFAAAAAA) else Color(0xFF555555),
+                        color = if (config.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontSize = 12.sp
                     )
                 }
@@ -373,10 +426,10 @@ private fun ButtonConfigItem(
                 checked = config.isEnabled,
                 onCheckedChange = { onToggleEnabled() },
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF4CAF50),
-                    checkedTrackColor = Color(0xFF4CAF50).copy(alpha = 0.5f),
-                    uncheckedThumbColor = Color(0xFFF44336),
-                    uncheckedTrackColor = Color(0xFFF44336).copy(alpha = 0.5f)
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    uncheckedThumbColor = MaterialTheme.colorScheme.error,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                 )
             )
         }
@@ -405,7 +458,7 @@ private fun EditButtonDialog(
                 .fillMaxWidth(0.8f)
                 .clickable(enabled = false) { },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF2A2A3A)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -425,12 +478,12 @@ private fun EditButtonDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("按键名称", color = Color(0xFF888888)) },
+                    label = { Text("按键名称", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF4A90D9),
-                        unfocusedBorderColor = Color(0xFF5A5A6A)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -440,12 +493,12 @@ private fun EditButtonDialog(
                 OutlinedTextField(
                     value = keyCode,
                     onValueChange = { keyCode = it.filter { c -> c.isDigit() || c in "xXabcdefABCDEF" } },
-                    label = { Text("KeyCode (十六进制)", color = Color(0xFF888888)) },
+                    label = { Text("KeyCode (十六进制)", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF4A90D9),
-                        unfocusedBorderColor = Color(0xFF5A5A6A)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -459,8 +512,8 @@ private fun EditButtonDialog(
                         checked = isToggle,
                         onCheckedChange = { isToggle = it },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Color(0xFF4A90D9),
-                            uncheckedColor = Color(0xFF888888)
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                     Text(
@@ -478,7 +531,7 @@ private fun EditButtonDialog(
                     Button(
                         onClick = onDismiss,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF3A3A4A)
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -495,7 +548,7 @@ private fun EditButtonDialog(
                             ))
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4A90D9)
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.weight(1f)
                     ) {

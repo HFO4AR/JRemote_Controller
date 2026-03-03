@@ -26,8 +26,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            JRemoteTheme {
-                val viewModel: ControlViewModel = viewModel()
+            val viewModel: ControlViewModel = viewModel()
+            val settings by viewModel.settings.collectAsState()
+
+            JRemoteTheme(
+                themeMode = settings.themeMode,
+                dynamicColor = settings.dynamicColor
+            ) {
                 val navController = rememberNavController()
 
                 AppNavigation(
@@ -91,7 +96,7 @@ fun AppNavigation(
                 onExitControlMode = { viewModel.exitControlMode() }
             )
         }
-        
+
         composable(Screen.Connection.route) {
             val scannedDevices by viewModel.scannedDevices.collectAsState()
             val isScanning by viewModel.isScanning.collectAsState()
@@ -110,9 +115,8 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-        
+
         composable(Screen.Settings.route) {
-            val settings by viewModel.settings.collectAsState()
             SettingsScreen(
                 buttonConfigs = buttonConfigs,
                 settings = settings,

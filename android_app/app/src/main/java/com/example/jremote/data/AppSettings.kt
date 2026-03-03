@@ -6,10 +6,18 @@ data class AppSettings(
     val hapticFeedback: Boolean = true,
     val autoReconnect: Boolean = false,
     val toggleButtonLayout: ToggleButtonLayout = ToggleButtonLayout.HORIZONTAL,
-    val lastConnectedDeviceAddress: String? = null
+    val lastConnectedDeviceAddress: String? = null,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val dynamicColor: Boolean = false
 )
 
 enum class ToggleButtonLayout {
     HORIZONTAL,
     GRID_2X2
+}
+
+enum class ThemeMode {
+    SYSTEM,  // 跟随系统
+    DARK,    // 深色
+    LIGHT    // 浅色
 }

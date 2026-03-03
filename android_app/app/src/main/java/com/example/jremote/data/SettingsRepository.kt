@@ -23,6 +23,8 @@ class SettingsRepository(private val context: Context) {
         val AUTO_RECONNECT = booleanPreferencesKey("auto_reconnect")
         val TOGGLE_BUTTON_LAYOUT = stringPreferencesKey("toggle_button_layout")
         val LAST_CONNECTED_DEVICE_ADDRESS = stringPreferencesKey("last_connected_device_address")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
     }
     
     private object ButtonKeys {
@@ -41,7 +43,13 @@ class SettingsRepository(private val context: Context) {
             } catch (e: IllegalArgumentException) {
                 ToggleButtonLayout.HORIZONTAL
             },
-            lastConnectedDeviceAddress = prefs[Keys.LAST_CONNECTED_DEVICE_ADDRESS]
+            lastConnectedDeviceAddress = prefs[Keys.LAST_CONNECTED_DEVICE_ADDRESS],
+            themeMode = try {
+                ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: "SYSTEM")
+            } catch (e: IllegalArgumentException) {
+                ThemeMode.SYSTEM
+            },
+            dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: false
         )
     }
     
@@ -55,6 +63,8 @@ class SettingsRepository(private val context: Context) {
             settings.lastConnectedDeviceAddress?.let {
                 prefs[Keys.LAST_CONNECTED_DEVICE_ADDRESS] = it
             }
+            prefs[Keys.THEME_MODE] = settings.themeMode.name
+            prefs[Keys.DYNAMIC_COLOR] = settings.dynamicColor
         }
     }
     

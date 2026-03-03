@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,10 +36,15 @@ fun Joystick(
 ) {
     var knobPosition by remember { mutableStateOf(Offset.Zero) }
     var isPressed by remember { mutableStateOf(false) }
-    
+
     val knobRadius = size * knobRatio / 2
     val outerRadius = size / 2 - knobRadius
-    
+
+    // 获取主题颜色
+    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     Box(
         modifier = modifier
             .size(size)
@@ -80,30 +86,30 @@ fun Joystick(
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             val center = this.size.center
-            
+
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFF2A2A3A),
-                        Color(0xFF1A1A2A)
+                        surfaceColor.copy(alpha = 0.8f),
+                        surfaceColor.copy(alpha = 0.5f)
                     ),
                     center = center,
                     radius = size.toPx() / 2
                 ),
                 radius = size.toPx() / 2
             )
-            
+
             drawCircle(
-                color = Color(0xFF3A3A4A),
+                color = outlineColor,
                 radius = outerRadius.toPx(),
                 center = center,
                 style = Stroke(width = 2.dp.toPx())
             )
-            
+
             for (i in 0..3) {
                 val angle = i * 90f
                 drawLine(
-                    color = Color(0xFF3A3A4A).copy(alpha = 0.5f),
+                    color = outlineColor.copy(alpha = 0.3f),
                     start = Offset(
                         center.x + cos(Math.toRadians(angle.toDouble())).toFloat() * outerRadius.toPx() * 0.3f,
                         center.y + sin(Math.toRadians(angle.toDouble())).toFloat() * outerRadius.toPx() * 0.3f
@@ -115,10 +121,10 @@ fun Joystick(
                     strokeWidth = 1.dp.toPx()
                 )
             }
-            
+
             val knobCenter = Offset(center.x + knobPosition.x, center.y + knobPosition.y)
-            val knobColor = if (isPressed) Color(0xFF4A90D9) else Color(0xFF5A5A6A)
-            
+            val knobColor = if (isPressed) primaryColor else outlineColor
+
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
@@ -131,7 +137,7 @@ fun Joystick(
                 radius = knobRadius.toPx(),
                 center = knobCenter
             )
-            
+
             drawCircle(
                 color = Color.White.copy(alpha = 0.3f),
                 radius = knobRadius.toPx() * 0.3f,

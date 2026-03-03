@@ -5,13 +5,15 @@ import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,24 +21,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,13 +52,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectionScreen(
     bondedDevices: List<BluetoothDevice>,
@@ -67,10 +71,9 @@ fun ConnectionScreen(
     onStopScan: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     var hasPermissions by remember { mutableStateOf(false) }
     var connectingAddress by remember { mutableStateOf<String?>(null) }
-    var selectedTab by remember { mutableStateOf(0) }
 
     // 连接成功或失败后清除连接状态
     LaunchedEffect(isConnected) {
@@ -84,7 +87,7 @@ fun ConnectionScreen(
     ) { permissions ->
         hasPermissions = permissions.values.all { it }
     }
-    
+
     LaunchedEffect(Unit) {
         val permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             arrayOf(
@@ -99,191 +102,227 @@ fun ConnectionScreen(
                 Manifest.permission.ACCESS_FINE_LOCATION
             )
         }
-        
+
         val allGranted = permissions.all {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
-        
+
         if (!allGranted) {
             permissionLauncher.launch(permissions)
         } else {
             hasPermissions = true
         }
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A2A))
-            .statusBarsPadding()
-            .padding(16.dp)
-    ) {
-        // 标题栏
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "蓝牙设备",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            
-            if (isConnected) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF4CAF50), shape = RoundedCornerShape(4.dp))
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+
+    // 进入页面自动扫描
+    LaunchedEffect(hasPermissions) {
+        if (hasPermissions && !isConnected) {
+            onStartScan()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
-                        text = "已连接: $connectedDeviceName",
-                        color = Color(0xFF4CAF50),
-                        fontSize = 14.sp
+                        text = if (isConnected) connectedDeviceName else "扫描设备",
+                        fontWeight = FontWeight.Medium
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onDisconnect,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF44336)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
                         )
-                    ) {
-                        Text("断开")
+                    }
+                },
+                actions = {
+                    if (isConnected) {
+                        FilledTonalButton(
+                            onClick = onDisconnect,
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Text("断开")
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (!hasPermissions) {
+                // 权限请求界面
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "需要蓝牙权限",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "请授予蓝牙权限以扫描设备",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-            }
-        }
-        
-        if (!hasPermissions) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Color(0xFF4A90D9))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "请授予蓝牙权限",
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        } else {
-            // 扫描按钮
-            Button(
-                onClick = { if (isScanning) onStopScan() else onStartScan() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isScanning) Color(0xFFF44336) else Color(0xFF4A90D9)
-                )
-            ) {
-                if (isScanning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("停止扫描")
-                } else {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("扫描附近设备")
-                }
-            }
-            
-            // 标签页切换
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                TabButton(
-                    text = "已配对 (${bondedDevices.size})",
-                    isSelected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                TabButton(
-                    text = "附近设备 (${scannedDevices.size})",
-                    isSelected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            
-            // 设备列表
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val devices = if (selectedTab == 0) bondedDevices else scannedDevices
-
-                items(devices) { device ->
-                    val isThisDeviceConnecting = connectingAddress == device.address
-                    val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
-                    DeviceItem(
-                        device = device,
-                        isSelected = connectedDeviceName == (device.name ?: "Unknown"),
-                        isConnecting = isThisDeviceConnecting,
-                        isBonded = isBonded,
-                        onClick = {
-                            if (!isConnected && connectingAddress == null) {
-                                connectingAddress = device.address
-                                onConnect(device.address)
-                            }
-                        },
-                        onLongClick = {
-                            // 长按已配对设备取消配对
-                            if (isBonded && selectedTab == 0) {
-                                onRemoveBond(device.address)
+            } else {
+                // 设备列表（显示扫描结果）
+                if (scannedDevices.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "正在扫描设备...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "未发现设备",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "点击下方按钮重新扫描",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
                             }
                         }
-                    )
-                }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = scannedDevices,
+                            key = { it.address }
+                        ) { device ->
+                            val isThisDeviceConnecting = connectingAddress == device.address
+                            val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
+                            val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
 
-                if (devices.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (selectedTab == 0)
-                                    "没有已配对的设备\n请在系统蓝牙设置中先配对设备"
-                                else
-                                    "未发现附近设备\n点击上方按钮开始扫描",
-                                color = Color(0xFF888888),
-                                fontSize = 14.sp
+                            DeviceCard(
+                                deviceName = device.name ?: "未知设备",
+                                deviceAddress = device.address,
+                                isConnected = isThisDeviceConnected,
+                                isConnecting = isThisDeviceConnecting,
+                                isBonded = isBonded,
+                                onClick = {
+                                    if (!isConnected && connectingAddress == null) {
+                                        connectingAddress = device.address
+                                        onConnect(device.address)
+                                    }
+                                }
                             )
                         }
                     }
                 }
 
-                // 底部按钮放在 LazyColumn 内部
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onNavigateBack,
+                // 扫描按钮
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp)
+                ) {
+                    // 显示设备数量和扫描状态
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF3A3A4A)
-                        )
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("返回控制界面")
+                        Text(
+                            text = if (scannedDevices.isEmpty())
+                                "点击下方按钮开始扫描"
+                            else
+                                "发现 ${scannedDevices.size} 个设备",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        if (isScanning) {
+                            Text(
+                                text = "扫描中...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            if (isScanning) onStopScan() else onStartScan()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isConnected
+                    ) {
+                        if (isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("停止扫描")
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("重新扫描")
+                        }
                     }
                 }
             }
@@ -292,57 +331,25 @@ fun ConnectionScreen(
 }
 
 @Composable
-private fun TabButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) Color(0xFF4A90D9) else Color(0xFF2A2A3A))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) Color.White else Color(0xFFAAAAAA),
-            fontSize = 14.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-        )
-    }
-}
-
-@Composable
-private fun DeviceItem(
-    device: BluetoothDevice,
-    isSelected: Boolean,
+private fun DeviceCard(
+    deviceName: String,
+    deviceAddress: String,
+    isConnected: Boolean,
     isConnecting: Boolean,
-    isBonded: Boolean = false,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit = {}
+    isBonded: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (!isConnecting) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { onClick() },
-                            onLongPress = { onLongClick() }
-                        )
-                    }
-                } else {
-                    Modifier
-                }
-            ),
+            .clickable(enabled = !isConnecting, onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF2A3A4A) else Color(0xFF2A2A3A)
+            containerColor = if (isConnected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
@@ -350,71 +357,82 @@ private fun DeviceItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = null,
-                tint = if (isSelected) Color(0xFF4A90D9) else Color(0xFF888888),
-                modifier = Modifier.size(32.dp)
-            )
+            // 状态指示图标
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when {
+                            isConnected -> MaterialTheme.colorScheme.primary
+                            isBonded -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when {
+                        isConnected -> "✓"
+                        isBonded -> "★"
+                        else -> "●"
+                    },
+                    color = when {
+                        isConnected -> MaterialTheme.colorScheme.onPrimary
+                        isBonded -> MaterialTheme.colorScheme.onSecondary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = device.name ?: "Unknown Device",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        text = deviceName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isConnected)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (isBonded) {
                         Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    Color(0xFF4CAF50),
-                                    shape = RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "已配对",
-                                color = Color.White,
-                                fontSize = 10.sp
-                            )
-                        }
+                        Text(
+                            text = "已配对",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                     }
                 }
                 Text(
-                    text = device.address,
-                    color = Color(0xFF888888),
-                    fontSize = 12.sp
+                    text = deviceAddress,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isConnected)
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (isConnecting && !isSelected) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color(0xFF4A90D9),
-                    strokeWidth = 2.dp
-                )
-            }
-            
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            Color(0xFF4CAF50),
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
+            // 连接状态
+            when {
+                isConnecting -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                isConnected -> {
                     Text(
                         text = "已连接",
-                        color = Color.White,
-                        fontSize = 12.sp
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

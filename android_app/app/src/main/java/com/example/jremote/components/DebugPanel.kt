@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +50,7 @@ fun DebugPanel(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1A1A2A).copy(alpha = 0.9f))
+            .background(Color(0xFF1A1A2A))
             .padding(8.dp)
     ) {
         ConnectionStatusRow(connectionStatus)
@@ -86,7 +87,7 @@ private fun ConnectionStatusRow(status: ConnectionStatus) {
                 modifier = Modifier
                     .padding(end = 6.dp)
                     .background(
-                        if (status.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                        if (status.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(4.dp)
                     )
                     .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -112,9 +113,9 @@ private fun ConnectionStatusRow(status: ConnectionStatus) {
         if (status.isConnected && status.latency > 0) {
             Text(
                 text = "${status.latency}ms",
-                color = if (status.latency < 50) Color(0xFF4CAF50)
-                       else if (status.latency < 100) Color(0xFFFFC107)
-                       else Color(0xFFF44336),
+                color = if (status.latency < 50) MaterialTheme.colorScheme.primary
+                       else if (status.latency < 100) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.primary,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace
             )
@@ -127,9 +128,9 @@ private fun DebugMessageRow(message: DebugMessage) {
     val timeFormat = remember { SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()) }
     
     val levelColor = when (message.level) {
-        DebugLevel.INFO -> Color(0xFF64B5F6)
-        DebugLevel.WARNING -> Color(0xFFFFB74D)
-        DebugLevel.ERROR -> Color(0xFFE57373)
+        DebugLevel.INFO -> MaterialTheme.colorScheme.primary
+        DebugLevel.WARNING -> MaterialTheme.colorScheme.primary
+        DebugLevel.ERROR -> MaterialTheme.colorScheme.primary
     }
     
     Row(
@@ -139,7 +140,7 @@ private fun DebugMessageRow(message: DebugMessage) {
     ) {
         Text(
             text = timeFormat.format(Date(message.timestamp)),
-            color = Color(0xFF888888),
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             modifier = Modifier.padding(end = 4.dp)
@@ -156,7 +157,7 @@ private fun DebugMessageRow(message: DebugMessage) {
         
         Text(
             text = "[${message.tag}]",
-            color = Color(0xFFAAAAAA),
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             modifier = Modifier.padding(end = 4.dp)
@@ -164,7 +165,7 @@ private fun DebugMessageRow(message: DebugMessage) {
         
         Text(
             text = message.message,
-            color = Color(0xFFDDDDDD),
+            color = MaterialTheme.colorScheme.primary,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
         )

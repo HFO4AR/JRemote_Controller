@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,20 +38,20 @@ fun ControlButton(
     val haptic = LocalHapticFeedback.current
 
     val backgroundColor = when {
-        !config.isEnabled -> Color(0xFF2A2A3A).copy(alpha = 0.3f)
-        isPressed -> Color(0xFF4A90D9)
-        isToggled -> Color(0xFF2E7D32)
-        else -> Color(0xFF3A3A4A)
+        !config.isEnabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        isPressed -> MaterialTheme.colorScheme.primary
+        isToggled -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
     val borderColor = when {
-        !config.isEnabled -> Color(0xFF3A3A4A).copy(alpha = 0.3f)
-        isPressed -> Color(0xFF6AB0F9)
-        isToggled -> Color(0xFF4CAF50)
-        else -> Color(0xFF5A5A6A)
+        !config.isEnabled -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        isPressed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        isToggled -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+        else -> MaterialTheme.colorScheme.outline
     }
 
-    val textColor = if (config.isEnabled) Color.White else Color(0xFF555555)
+    val textColor = if (config.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
 
     Box(
         modifier = modifier

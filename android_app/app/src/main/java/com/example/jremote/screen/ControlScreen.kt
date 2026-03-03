@@ -6,9 +6,17 @@ import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +49,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -55,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -179,7 +189,7 @@ private fun PortraitModeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF12121A))
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -187,7 +197,7 @@ private fun PortraitModeScreen(
     ) {
         Text(
             text = "JRemote Controller",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable {
@@ -200,7 +210,7 @@ private fun PortraitModeScreen(
 
         Text(
             text = "Design by 1034Robotics HFO4AR",
-            color = Color(0xFF888888),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 16.sp
         )
 
@@ -213,7 +223,7 @@ private fun PortraitModeScreen(
             Box(
                 modifier = Modifier
                     .background(
-                        if (connectionStatus.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                        if (connectionStatus.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         shape = RoundedCornerShape(8.dp)
                     )
                     .clickable { onConnectionClick() }
@@ -224,11 +234,11 @@ private fun PortraitModeScreen(
                         modifier = Modifier
                             .padding(end = 8.dp)
                             .size(8.dp)
-                            .background(Color.White, shape = RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(4.dp))
                     )
                     Text(
                         text = if (connectionStatus.isConnected) "已连接: ${connectionStatus.deviceName}" else "未连接 - 点击连接",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.surface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -244,7 +254,7 @@ private fun PortraitModeScreen(
                 .fillMaxWidth(0.8f)
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4A90D9)
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -263,20 +273,22 @@ private fun PortraitModeScreen(
                 .fillMaxWidth(0.8f)
                 .height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF3A3A4A)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "设置",
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "设置",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color=MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -284,7 +296,7 @@ private fun PortraitModeScreen(
 
         Text(
             text = if (connectionStatus.isConnected) "点击启动进入横屏控制模式" else "未连接设备",
-            color = if (connectionStatus.isConnected) Color(0xFF4CAF50) else Color(0xFFFF9800),
+            color = if (connectionStatus.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
             fontSize = 14.sp
         )
     }
@@ -299,13 +311,13 @@ private fun JoystickInfoPanel(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1A1A2A).copy(alpha = 0.8f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = label,
-            color = Color(0xFF888888),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 10.sp
         )
         Spacer(modifier = Modifier.height(2.dp))
@@ -314,13 +326,13 @@ private fun JoystickInfoPanel(
         ) {
             Text(
                 text = String.format("X:%+.2f", state.x),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = String.format("Y:%+.2f", state.y),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -342,12 +354,8 @@ private fun SignalStrengthIcon(rssi: Int) {
         else -> 1
     }
 
-    val color = when (signalLevel) {
-        4 -> Color(0xFF4CAF50) // 绿色
-        3 -> Color(0xFF8BC34A) // 浅绿
-        2 -> Color(0xFFFFC107) // 黄色
-        else -> Color(0xFFF44336) // 红色
-    }
+    val signalColor = MaterialTheme.colorScheme.primary
+    val inactiveColor = MaterialTheme.colorScheme.surfaceVariant
 
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -360,7 +368,7 @@ private fun SignalStrengthIcon(rssi: Int) {
                     .width(4.dp)
                     .height((i * 4 + 4).dp)
                     .background(
-                        if (i <= signalLevel) color else Color(0xFF444444),
+                        if (i <= signalLevel) signalColor else inactiveColor,
                         shape = RoundedCornerShape(1.dp)
                     )
             )
@@ -370,7 +378,7 @@ private fun SignalStrengthIcon(rssi: Int) {
     // 显示 RSSI 数值
     Text(
         text = "${rssi}dBm",
-        color = color,
+        color = signalColor,
         fontSize = 10.sp,
         modifier = Modifier.padding(start = 4.dp)
     )
@@ -379,33 +387,33 @@ private fun SignalStrengthIcon(rssi: Int) {
 @Composable
 private fun LatencyDisplay(latency: Int) {
     // 延迟等级
-    // < 50ms: 优秀 (绿色)
-    // 50-100ms: 良好 (浅绿)
-    // 100-200ms: 一般 (黄色)
-    // > 200ms: 差 (红色)
-    val color = when {
-        latency < 50 -> Color(0xFF4CAF50) // 绿色
-        latency < 100 -> Color(0xFF8BC34A) // 浅绿
-        latency < 200 -> Color(0xFFFFC107) // 黄色
-        else -> Color(0xFFF44336) // 红色
+    // < 50ms: 优秀
+    // 50-100ms: 良好
+    // 100-200ms: 一般
+    // > 200ms: 差
+    val latencyColor = when {
+        latency < 50 -> MaterialTheme.colorScheme.primary
+        latency < 100 -> MaterialTheme.colorScheme.secondary
+        latency < 200 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.error
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .background(Color(0xFF2A2A3A), shape = RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        // 延迟图标 (闪电形状用圆圈代替)
+        // 延迟图标
         Box(
             modifier = Modifier
                 .size(8.dp)
-                .background(color, shape = RoundedCornerShape(4.dp))
+                .background(latencyColor, shape = RoundedCornerShape(4.dp))
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = "${latency}ms",
-            color = color,
+            color = latencyColor,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
@@ -460,7 +468,7 @@ private fun LandscapeControlScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF12121A))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // 顶部工具栏
         Row(
@@ -474,7 +482,7 @@ private fun LandscapeControlScreen(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "设置",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -496,7 +504,7 @@ private fun LandscapeControlScreen(
                 Box(
                     modifier = Modifier
                         .background(
-                            if (connectionStatus.isConnected) Color(0xFF4CAF50) else Color(0xFFF44336),
+                            if (connectionStatus.isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                             shape = RoundedCornerShape(4.dp)
                         )
                         .clickable { onConnectionClick() }
@@ -504,16 +512,15 @@ private fun LandscapeControlScreen(
                 ) {
                     Text(
                         text = if (connectionStatus.isConnected) "已连接" else "未连接",
-                        color = Color.White,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
 
                 Button(
                     onClick = onStopSending,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF44336)
+                        containerColor = MaterialTheme.colorScheme.error
                     ),
                     modifier = Modifier.height(36.dp)
                 ) {
@@ -627,10 +634,10 @@ private fun LandscapeControlScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val statusColor = when {
-                        !connectionStatus.isConnected -> Color(0xFFF44336)
-                        isEmergencyStopped -> Color(0xFFFF9800)
-                        isSending -> Color(0xFF4CAF50)
-                        else -> Color(0xFFF44336)
+                        !connectionStatus.isConnected -> MaterialTheme.colorScheme.error
+                        isEmergencyStopped -> MaterialTheme.colorScheme.tertiary
+                        isSending -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.error
                     }
                     val statusText = when {
                         !connectionStatus.isConnected -> "遥控器断开连接"
@@ -638,17 +645,34 @@ private fun LandscapeControlScreen(
                         isSending -> "遥控正常"
                         else -> "遥控未就绪"
                     }
+
+                    // 状态指示器带脉冲动画
+                    val pulseScale by animateFloatAsState(
+                        targetValue = if (isSending) 1f else 0.8f,
+                        animationSpec = tween(300),
+                        label = "pulse"
+                    )
                     Box(
                         modifier = Modifier
                             .size(12.dp)
+                            .scale(pulseScale)
                             .background(statusColor, shape = CircleShape)
                     )
-                    Text(
-                        text = statusText,
-                        color = statusColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = statusText,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(150)) togetherWith
+                                    fadeOut(animationSpec = tween(150))
+                        },
+                        label = "statusText"
+                    ) { text ->
+                        Text(
+                            text = text,
+                            color = statusColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -663,14 +687,14 @@ private fun LandscapeControlScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSending) Color(0xFFF44336) else Color(0xFF4CAF50)
+                        containerColor = if (isSending) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier
                         .height(56.dp)
                         .fillMaxWidth(0.6f)
                 ) {
                     Text(
-                        text = if (isSending) "STOP" else "START",
+                        text = if (isSending) "E-STOP" else "RESTART",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -878,13 +902,13 @@ private fun ExpandableLogPanel(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1A1A2A))
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         // 标题栏
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF2A2A3A))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable { isExpanded = !isExpanded }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -902,7 +926,7 @@ private fun ExpandableLogPanel(
                 )
                 Text(
                     text = "调试日志 (${debugMessages.size})",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -914,7 +938,6 @@ private fun ExpandableLogPanel(
             ) {
                 Text(
                     text = "滚动",
-                    color = Color.White,
                     fontSize = 11.sp
                 )
                 Switch(
@@ -923,7 +946,7 @@ private fun ExpandableLogPanel(
                     modifier = Modifier.height(24.dp),
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF4A90D9),
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
                         uncheckedThumbColor = Color.Gray,
                         uncheckedTrackColor = Color.DarkGray
                     )
@@ -936,7 +959,7 @@ private fun ExpandableLogPanel(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "保存日志",
-                        tint = Color(0xFF4A90D9),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -958,11 +981,11 @@ private fun ExpandableLogPanel(
                 reverseLayout = false
             ) {
                 items(debugMessages) { message ->
-                    val color = when (message.level) {
-                        DebugLevel.ERROR -> Color(0xFFF44336)
-                        DebugLevel.WARNING -> Color(0xFFFF9800)
-                        DebugLevel.INFO -> Color(0xFF4CAF50)
-                        else -> Color(0xFF888888)
+                    val logColor = when (message.level) {
+                        DebugLevel.ERROR -> MaterialTheme.colorScheme.error
+                        DebugLevel.WARNING -> MaterialTheme.colorScheme.tertiary
+                        DebugLevel.INFO -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                     val timeStr = java.text.SimpleDateFormat(
                         "HH:mm:ss.SSS",
@@ -971,7 +994,7 @@ private fun ExpandableLogPanel(
                         .format(java.util.Date(message.timestamp))
                     Text(
                         text = "[$timeStr][${message.tag}] ${message.message}",
-                        color = color,
+                        color = logColor,
                         fontSize = 9.sp,
                         lineHeight = 12.sp,
                         modifier = Modifier.padding(vertical = 1.dp),
