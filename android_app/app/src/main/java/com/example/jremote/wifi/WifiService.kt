@@ -58,7 +58,7 @@ class WifiService(private val application: Application) {
     private var pingJob: Job? = null
 
     private var isConnected = false
-    private var lastSendTime = 0L  // 上次发送数据的时间
+    private var lastPingTime = 0L  // 上次发送 ping 的时间（仅用于 ping 延迟计算）
 
     fun connect(device: DiscoveredDevice, onComplete: (Boolean) -> Unit = {}) {
         serviceScope.launch {
@@ -122,7 +122,7 @@ class WifiService(private val application: Application) {
         socket?.close()
         socket = null
         targetAddress = null
-        lastSendTime = 0L
+        lastPingTime = 0L
 
         _connectionStatus.value = ConnectionStatus()
         _latency.value = null
@@ -143,10 +143,9 @@ class WifiService(private val application: Application) {
 
                 val packet = DatagramPacket(data, data.size, targetAddress, targetPort)
                 socket?.send(packet)
-                // 记录发送时间，用于计算延迟
-                lastSendTime = System.currentTimeMillis()
-                // 只有ping请求才记录成功日志，避免刷屏
+                // 只有 ping 请求才记录发送时间，用于延迟计算
                 if (data.size == 1 && data[0] == PING_REQUEST) {
+                    lastPingTime = System.currentTimeMillis()
                     withContext(Dispatchers.Main) {
                         addDebugMessage(DebugLevel.INFO, TAG, "Ping 发送成功")
                     }
@@ -203,10 +202,10 @@ class WifiService(private val application: Application) {
 
                     // 检查是否是响应 (0x50)
                     if (data.isNotEmpty() && data[0] == PING_RESPONSE) {
-                        // 根据上次发送时间计算延迟
-                        if (lastSendTime > 0) {
-                            _latency.value = (currentTime - lastSendTime).toInt()
-                            lastSendTime = 0  // 重置，避免重复计算
+                        // 根据上次 ping 发送时间计算延迟
+                        if (lastPingTime > 0) {
+                            _latency.value = (currentTime - lastPingTime).toInt()
+                            lastPingTime = 0  // 重置，避免重复计算
                         }
                     } else if (data.isNotEmpty()) {
                         // 处理其他数据（设备响应）
