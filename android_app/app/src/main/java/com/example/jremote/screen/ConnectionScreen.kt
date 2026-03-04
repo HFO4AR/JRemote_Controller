@@ -5,9 +5,6 @@ import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,27 +25,28 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.outlined.Bluetooth
+import androidx.compose.material.icons.outlined.Router
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,12 +84,12 @@ fun ConnectionScreen(
     onStopWifiScan: () -> Unit,
     onConnectWifiDevice: (DiscoveredDevice) -> Unit,
     onSetConnectionMode: (ConnectionType) -> Unit,
+    onConfigWifi: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
     var hasPermissions by remember { mutableStateOf(false) }
     var connectingAddress by remember { mutableStateOf<String?>(null) }
-    var showModeMenu by remember { mutableStateOf(false) }
 
     // 连接成功或失败后清除连接状态
     LaunchedEffect(isConnected) {
@@ -177,66 +175,6 @@ fun ConnectionScreen(
                     }
                 },
                 actions = {
-                    // 模式选择按钮
-                    Box {
-                        TextButton(onClick = { showModeMenu = true }) {
-                            Icon(
-                                imageVector = when (currentConnectionMode) {
-                                    ConnectionType.BLUETOOTH -> Icons.Default.Bluetooth
-                                    ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> Icons.Default.Wifi
-                                    ConnectionType.USB -> Icons.Default.Wifi
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = when (currentConnectionMode) {
-                                    ConnectionType.BLUETOOTH -> "蓝牙"
-                                    ConnectionType.WIFI_AP -> "AP"
-                                    ConnectionType.WIFI_LAN -> "局域网"
-                                    ConnectionType.USB -> "USB"
-                                }
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showModeMenu,
-                            onDismissRequest = { showModeMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("蓝牙模式") },
-                                onClick = {
-                                    onSetConnectionMode(ConnectionType.BLUETOOTH)
-                                    showModeMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Bluetooth, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("AP 模式（Wi-Fi 直连）") },
-                                onClick = {
-                                    onSetConnectionMode(ConnectionType.WIFI_AP)
-                                    showModeMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Wifi, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("局域网模式（Wi-Fi）") },
-                                onClick = {
-                                    onSetConnectionMode(ConnectionType.WIFI_LAN)
-                                    showModeMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Wifi, contentDescription = null)
-                                }
-                            )
-                        }
-                    }
-
                     if (isConnected) {
                         FilledTonalButton(
                             onClick = onDisconnect,
@@ -247,12 +185,75 @@ fun ConnectionScreen(
                         ) {
                             Text("断开")
                         }
+                    } else if (currentConnectionMode == ConnectionType.WIFI_AP || currentConnectionMode == ConnectionType.WIFI_LAN) {
+                        // WiFi 模式下显示配网按钮
+                        FilledTonalButton(onClick = onConfigWifi) {
+                            Icon(
+                                imageVector = Icons.Default.Router,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("配网")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            imageVector = if (currentConnectionMode == ConnectionType.BLUETOOTH)
+                                Icons.Filled.Bluetooth else Icons.Outlined.Bluetooth,
+                            contentDescription = null
+                        )
+                    },
+                    label = { Text("蓝牙") },
+                    selected = currentConnectionMode == ConnectionType.BLUETOOTH,
+                    onClick = {
+                        if (currentConnectionMode != ConnectionType.BLUETOOTH) {
+                            onSetConnectionMode(ConnectionType.BLUETOOTH)
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            imageVector = if (currentConnectionMode == ConnectionType.WIFI_AP)
+                                Icons.Filled.Router else Icons.Outlined.Router,
+                            contentDescription = null
+                        )
+                    },
+                    label = { Text("AP") },
+                    selected = currentConnectionMode == ConnectionType.WIFI_AP,
+                    onClick = {
+                        if (currentConnectionMode != ConnectionType.WIFI_AP) {
+                            onSetConnectionMode(ConnectionType.WIFI_AP)
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            imageVector = if (currentConnectionMode == ConnectionType.WIFI_LAN)
+                                Icons.Filled.Wifi else Icons.Outlined.Wifi,
+                            contentDescription = null
+                        )
+                    },
+                    label = { Text("局域网") },
+                    selected = currentConnectionMode == ConnectionType.WIFI_LAN,
+                    onClick = {
+                        if (currentConnectionMode != ConnectionType.WIFI_LAN) {
+                            onSetConnectionMode(ConnectionType.WIFI_LAN)
+                        }
+                    }
+                )
+            }
         }
     ) { paddingValues ->
         Column(

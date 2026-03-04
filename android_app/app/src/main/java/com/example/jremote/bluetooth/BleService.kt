@@ -22,7 +22,7 @@ import android.util.Log
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DebugLevel
-import com.example.jremote.data.DebugMessage
+import com.example.jremote.data.DebugManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -34,32 +34,33 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class BleService(private val context: Context) {
-    
+
     companion object {
         private const val TAG = "BleService"
-        
+
         val SERVICE_UUID: UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
         val CHARACTERISTIC_UUID_RX: UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
         val CHARACTERISTIC_UUID_TX: UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
         val CLIENT_CHARACTERISTIC_CONFIG: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
-    
+
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
-    
+
     private var bluetoothGatt: BluetoothGatt? = null
     private var txCharacteristic: BluetoothGattCharacteristic? = null
     private var rxCharacteristic: BluetoothGattCharacteristic? = null
-    
+
     private var isConnected = false
     private var currentDevice: BluetoothDevice? = null
     private var autoReconnectEnabled = false
-    
+
+    // 调试管理器
+    private val debugManager = DebugManager()
+    val debugMessages = debugManager.debugMessages
+
     private val _connectionStatus = MutableStateFlow(ConnectionStatus())
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
-
-    private val _debugMessages = MutableStateFlow<List<DebugMessage>>(emptyList())
-    val debugMessages: StateFlow<List<DebugMessage>> = _debugMessages.asStateFlow()
 
     private val _receivedData = MutableStateFlow<ByteArray?>(null)
     val receivedData: StateFlow<ByteArray?> = _receivedData.asStateFlow()
@@ -216,9 +217,8 @@ class BleService(private val context: Context) {
         }
     }
     
-    private fun addDebugMessage(level: DebugLevel, tag: String, message: String) {
-        val newMessage = DebugMessage(level = level, tag = tag, message = message)
-        _debugMessages.value = (_debugMessages.value + newMessage).takeLast(1000)
+    private fun addDebugMessage(level: com.example.jremote.data.DebugLevel, tag: String, message: String) {
+        debugManager.log(level, tag, message)
     }
     
     fun isBluetoothEnabled(): Boolean {
@@ -507,6 +507,6 @@ class BleService(private val context: Context) {
     }
 
     fun clearDebugMessages() {
-        _debugMessages.value = emptyList()
+        debugManager.clear()
     }
 }

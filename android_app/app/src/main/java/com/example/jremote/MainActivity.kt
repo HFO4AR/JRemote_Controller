@@ -15,10 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.jremote.navigation.Screen
+import com.example.jremote.screen.BleConfigScreen
 import com.example.jremote.screen.ConnectionScreen
 import com.example.jremote.screen.ControlScreen
 import com.example.jremote.screen.SettingsScreen
 import com.example.jremote.ui.theme.JRemoteTheme
+import com.example.jremote.viewmodel.BleConfigViewModel
 import com.example.jremote.viewmodel.ControlViewModel
 
 class MainActivity : ComponentActivity() {
@@ -122,6 +124,7 @@ fun AppNavigation(
                 onStopWifiScan = { viewModel.stopWifiDiscovery() },
                 onConnectWifiDevice = { device -> viewModel.connectToWifiDevice(device) },
                 onSetConnectionMode = { mode -> viewModel.setConnectionMode(mode) },
+                onConfigWifi = { navController.navigate(Screen.BleConfig.route) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -132,6 +135,31 @@ fun AppNavigation(
                 settings = settings,
                 onUpdateButtonConfig = { viewModel.updateButtonConfig(it) },
                 onUpdateSettings = { viewModel.updateSettings(it) },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.BleConfig.route) {
+            val configViewModel: BleConfigViewModel = viewModel()
+            val isConnected by configViewModel.isConnected.collectAsState()
+            val configStatus by configViewModel.configStatus.collectAsState()
+            val currentWifiSsid by configViewModel.currentWifiSsid.collectAsState()
+            val scannedDevices by configViewModel.scannedDeviceNames.collectAsState()
+            val isScanning by configViewModel.isScanning.collectAsState()
+
+            BleConfigScreen(
+                isConnected = isConnected,
+                configStatus = configStatus,
+                currentWifiSsid = currentWifiSsid,
+                scannedDevices = scannedDevices,
+                isScanning = isScanning,
+                onSsidChange = { configViewModel.updateSsid(it) },
+                onPasswordChange = { configViewModel.updatePassword(it) },
+                onConnect = { configViewModel.sendConfig() },
+                onDisconnect = { configViewModel.disconnect() },
+                onReadCurrentWifi = { configViewModel.readCurrentWifi() },
+                onStartScan = { configViewModel.startScan() },
+                onConnectToDevice = { address -> configViewModel.connectToDevice(address) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

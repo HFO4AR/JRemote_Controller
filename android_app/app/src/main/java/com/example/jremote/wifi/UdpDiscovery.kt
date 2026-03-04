@@ -1,5 +1,6 @@
 package com.example.jremote.wifi
 
+import android.content.Context
 import android.util.Log
 import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DebugLevel
@@ -21,7 +22,7 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.charset.StandardCharsets
 
-class UdpDiscovery {
+class UdpDiscovery(private val context: Context) {
 
     companion object {
         private const val TAG = "UdpDiscovery"
@@ -31,6 +32,7 @@ class UdpDiscovery {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val wifiUtils = WifiUtils(context)
 
     private val _discoveredDevices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<DiscoveredDevice>> = _discoveredDevices.asStateFlow()
@@ -104,24 +106,37 @@ class UdpDiscovery {
             try {
                 val socket = DatagramSocket()
                 socket.broadcast = true
+                socket.soTimeout = 5000
 
                 val message = DISCOVERY_MESSAGE.toByteArray(StandardCharsets.UTF_8)
 
-                // 发送广播到当前网段的所有地址
-                val broadcastAddresses = listOf(
-                    "255.255.255.255",
-                    "192.168.255.255",
-                    "10.255.255.255"
-                )
-
-                for (broadcastAddress in broadcastAddresses) {
-                    try {
-                        val address = InetAddress.getByName(broadcastAddress)
-                        val packet = DatagramPacket(message, message.size, address, DISCOVERY_PORT)
-                        socket.send(packet)
-                    } catch (e: Exception) {
-                        // 忽略单个广播失败
+                // 获取手机 IP 并计算广播地址
+                try {
+                    val wifiAddr = wifiUtils.getCurrentWifiIp()
+                    if (wifiAddr != null) {
+                        // 根据手机 IP 计算广播地址
+                        val parts = wifiAddr.split(".")
+                        if (parts.size == 4) {
+                            val broadcastAddr = "${parts[0]}.${parts[1]}.${parts[2]}.255"
+                            addDebugMessage(DebugLevel.INFO, TAG, "发送广播到: $broadcastAddr")
+                            val address = InetAddress.getByName(broadcastAddr)
+                            val packet = DatagramPacket(message, message.size, address, DISCOVERY_PORT)
+                            socket.send(packet)
+                        }
                     }
+                } catch (e: Exception) {
+                    addDebugMessage(DebugLevel.WARNING, TAG, "获取广播地址失败: ${e.message}")
+                }
+
+                // 也尝试发送到通用广播地址
+                try {
+                    val broadcastAddress = "255.255.255.255"
+                    val address = InetAddress.getByName(broadcastAddress)
+                    val packet = DatagramPacket(message, message.size, address, DISCOVERY_PORT)
+                    socket.send(packet)
+                    addDebugMessage(DebugLevel.INFO, TAG, "发送广播到: $broadcastAddress")
+                } catch (e: Exception) {
+                    addDebugMessage(DebugLevel.WARNING, TAG, "通用广播失败: ${e.message}")
                 }
 
                 socket.close()

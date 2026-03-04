@@ -32,7 +32,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
     private val bleService = BleService(application)
     private val wifiService = WifiService(application)
-    private val udpDiscovery = UdpDiscovery()
+    private val udpDiscovery = UdpDiscovery(application)
     private val settingsRepository = SettingsRepository(application)
     
     private val _leftJoystickState = MutableStateFlow(JoystickState())
@@ -142,12 +142,6 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         }
 
         viewModelScope.launch {
-            bleService.debugMessages.collect { messages ->
-                _debugMessages.value = (messages + wifiService.debugMessages.value).takeLast(1000)
-            }
-        }
-
-        viewModelScope.launch {
             wifiService.connectionStatus.collect { status ->
                 // 检测连接断开事件
                 if (previousConnectionStatus && !status.isConnected) {
@@ -158,9 +152,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             }
         }
 
+        // 合并蓝牙和 WiFi 的调试消息
         viewModelScope.launch {
-            wifiService.debugMessages.collect { messages ->
-                _debugMessages.value = (bleService.debugMessages.value + messages).takeLast(1000)
+            combine(bleService.debugMessages, wifiService.debugMessages) { bleMessages, wifiMessages ->
+                (bleMessages + wifiMessages).takeLast(1000)
+            }.collect { mergedMessages ->
+                _debugMessages.value = mergedMessages
             }
         }
     }

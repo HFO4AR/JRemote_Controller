@@ -7,6 +7,7 @@ import android.util.Log
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DebugLevel
+import com.example.jremote.data.DebugManager
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.DiscoveredDevice
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +38,10 @@ class WifiService(private val application: Application) {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val wifiManager: WifiManager = application.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
+    // 调试管理器
+    private val debugManager = DebugManager()
+    val debugMessages = debugManager.debugMessages
+
     private val _connectionStatus = MutableStateFlow(ConnectionStatus())
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
@@ -45,9 +50,6 @@ class WifiService(private val application: Application) {
 
     private val _wifiRssi = MutableStateFlow<Int?>(null)
     val wifiRssi: StateFlow<Int?> = _wifiRssi.asStateFlow()
-
-    private val _debugMessages = MutableStateFlow<List<DebugMessage>>(emptyList())
-    val debugMessages: StateFlow<List<DebugMessage>> = _debugMessages.asStateFlow()
 
     private var socket: DatagramSocket? = null
     private var targetAddress: InetAddress? = null
@@ -266,11 +268,10 @@ class WifiService(private val application: Application) {
     }
 
     private fun addDebugMessage(level: DebugLevel, tag: String, message: String) {
-        val newMessage = DebugMessage(level = level, tag = tag, message = message)
-        _debugMessages.value = (_debugMessages.value + newMessage).takeLast(100)
+        debugManager.log(level, tag, message)
     }
 
     fun clearDebugMessages() {
-        _debugMessages.value = emptyList()
+        debugManager.clear()
     }
 }
