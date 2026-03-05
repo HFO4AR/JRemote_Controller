@@ -186,6 +186,133 @@ int main() {
 3. **周期选择**: 根据任务实时性要求选择合适的休眠时间
 4. **线程安全**: 如需在多线程间共享数据，考虑使用 mutex 或其他同步机制
 
+---
+
+## Zephyr BLE 回调封装（OOP 规范）
+
+> 参考: `firmware/zephyr_app/app/inc/ble.h`
+
+在 Zephyr 中，BLE 回调是 C 风格的函数指针，需要通过静态实例指针桥接到 OOP 类。
+
+### 设计原则
+
+- **所有成员变量**封装在类内部
+- **使用静态 instance_** 指针供回调函数访问类实例
+- 回调函数通过**公共成员函数**访问类数据
+
+### 头文件 (ble.h)
+
+```cpp
+class Ble {
+ public:
+  // 构造函数
+  Ble(k_thread_stack_t* stack, size_t stack_size);
+  ~Ble();
+
+  // 初始化
+  int Init();
+
+  // 供回调使用的公共接口
+  void OnConnected(struct bt_conn* conn);
+  void OnDisconnected(struct bt_conn* conn);
+  void OnRxData(const uint8_t* data, uint16_t len);
+
+  // 静态实例指针 (供回调使用)
+  static Ble* instance_;
+
+ private:
+  // 线程入口
+  static void ThreadEntry(void* p1, void* p2, void* p3);
+
+  // 线程相关
+  k_thread_stack_t* stack_;
+  size_t stack_size_;
+  struct k_thread thread_data_;
+
+  // 成员变量 (原全局变量)
+  bool initialized_;
+  bool connected_;
+  struct bt_conn* conn_;
+  BleDataCallback receive_callback_;
+};
+```
+
+### 源文件 (ble.cpp)
+
+```cpp
+// 1. 静态成员定义
+Ble* Ble::instance_ = nullptr;
+
+// 2. 回调函数 (静态)
+static void OnConnectedCallback(struct bt_conn* conn, uint8_t err) {
+  if (err) {
+    printk("BLE connection failed: %d\n", err);
+    return;
+  }
+  if (Ble::instance_) {
+    Ble::instance_->OnConnected(conn);
+  }
+}
+
+// 3. 回调注册
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+  .connected = OnConnectedCallback,
+  .disconnected = OnDisconnectedCallback,
+};
+
+// 4. GATT 回调
+static ssize_t OnRxWriteCallback(struct bt_conn* conn,
+                                 const struct bt_gatt_attr* attr,
+                                 const void* buf, uint16_t len,
+                                 uint16_t offset, uint8_t flags) {
+  if (Ble::instance_) {
+    Ble::instance_->OnRxData((const uint8_t*)buf, len);
+  }
+  return len;
+}
+
+// 5. 公共成员函数实现
+void Ble::OnConnected(struct bt_conn* conn) {
+  connected_ = true;
+  conn_ = bt_conn_ref(conn);
+}
+
+void Ble::OnRxData(const uint8_t* data, uint16_t len) {
+  if (receive_callback_) {
+    receive_callback_(data, len);
+  }
+}
+
+// 6. Init 中保存实例
+int Ble::Init() {
+  instance_ = this;
+  // ... 创建线程
+}
+```
+
+### main.cpp 使用
+
+```cpp
+// 定义线程栈
+K_THREAD_STACK_DEFINE(ble_stack_area, 2048);
+
+// 创建实例
+static Ble g_ble(ble_stack_area, K_THREAD_STACK_SIZEOF(ble_stack_area));
+
+int main() {
+  g_ble.Init();
+}
+```
+
+### 关键点
+
+| 要点 | 说明 |
+|------|------|
+| `static Ble* instance_` | 在类中声明，在 cpp 中定义 |
+| `instance_ = this` | 在 Init() 中保存实例指针 |
+| 回调函数 | 静态 C 风格函数，调用 `instance_->OnXxx()` |
+| 公共接口 | 供回调访问私有成员的桥梁 |
+
 ## 参考来源
 
 - `/home/yuki/project/mammoth/src/main.cpp`

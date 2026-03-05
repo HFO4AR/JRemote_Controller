@@ -41,19 +41,17 @@ class Ble {
   // 获取连接状态
   bool IsConnected() const;
 
+  // 供回调使用的公共接口
+  void OnConnected(struct bt_conn* conn);
+  void OnDisconnected(struct bt_conn* conn);
+  void OnRxData(const uint8_t* data, uint16_t len);
+
+  // 静态实例指针 (供回调使用) - 公开给静态回调函数访问
+  static Ble* instance_;
+
  private:
   // 线程入口 (静态成员函数)
   static void ThreadEntry(void* p1, void* p2, void* p3);
-
-  // BLE 回调函数
-  static void OnConnected(struct bt_conn* conn, uint8_t err);
-  static void OnDisconnected(struct bt_conn* conn, uint8_t reason);
-
-  // GATT 回调
-  static ssize_t OnRxWrite(struct bt_conn* conn,
-                           const struct bt_gatt_attr* attr,
-                           const void* buf, uint16_t len,
-                           uint16_t offset, uint8_t flags);
 
   // 线程相关
   k_thread_stack_t* stack_;
@@ -66,8 +64,5 @@ class Ble {
   struct bt_conn* conn_;
   BleDataCallback receive_callback_;
 };
-
-// 全局回调指针 (供 GATT 回调使用)
-extern BleDataCallback g_ble_callback;
 
 #endif  // BLE_H

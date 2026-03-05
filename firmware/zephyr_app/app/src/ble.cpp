@@ -2,43 +2,39 @@
 #include <zephyr/kernel.h>
 #include <zephyr/bluetooth/bluetooth.h>
 
-// 全局变量 (供回调使用)
-BleDataCallback g_ble_callback = nullptr;
-static bool g_ble_connected = false;
-static struct bt_conn* g_conn = nullptr;
-static Ble* g_ble_instance = nullptr;
+// 静态成员定义
+Ble* Ble::instance_ = nullptr;
 
 // 连接回调函数
-static void OnConnected(struct bt_conn* conn, uint8_t err) {
+static void OnConnectedCallback(struct bt_conn* conn, uint8_t err) {
   if (err) {
     printk("BLE connection failed: %d\n", err);
     return;
   }
   printk("BLE connected\n");
-  g_ble_connected = true;
-  g_conn = bt_conn_ref(conn);
+  if (Ble::instance_) {
+    Ble::instance_->OnConnected(conn);
+  }
 }
 
-static void OnDisconnected(struct bt_conn* conn, uint8_t reason) {
+static void OnDisconnectedCallback(struct bt_conn* conn, uint8_t reason) {
   printk("BLE disconnected: %d\n", reason);
-  g_ble_connected = false;
-  if (g_conn) {
-    bt_conn_unref(g_conn);
-    g_conn = nullptr;
+  if (Ble::instance_) {
+    Ble::instance_->OnDisconnected(conn);
   }
 }
 
 // 连接回调定义
 BT_CONN_CB_DEFINE(conn_callbacks) = {
-  .connected = OnConnected,
-  .disconnected = OnDisconnected,
+  .connected = OnConnectedCallback,
+  .disconnected = OnDisconnectedCallback,
 };
 
 // RX 写入回调
-static ssize_t OnRxWrite(struct bt_conn* conn,
-                         const struct bt_gatt_attr* attr,
-                         const void* buf, uint16_t len,
-                         uint16_t offset, uint8_t flags) {
+static ssize_t OnRxWriteCallback(struct bt_conn* conn,
+                                 const struct bt_gatt_attr* attr,
+                                 const void* buf, uint16_t len,
+                                 uint16_t offset, uint8_t flags) {
   (void)conn;
   (void)attr;
   (void)offset;
@@ -46,8 +42,8 @@ static ssize_t OnRxWrite(struct bt_conn* conn,
 
   printk("BLE RX: %d bytes\n", len);
 
-  if (g_ble_callback) {
-    g_ble_callback((const uint8_t*)buf, len);
+  if (Ble::instance_) {
+    Ble::instance_->OnRxData((const uint8_t*)buf, len);
   }
 
   return len;
@@ -58,7 +54,7 @@ BT_GATT_SERVICE_DEFINE(ble_gatt_service,
   BT_GATT_PRIMARY_SERVICE(BLE_SERVICE_UUID),
   BT_GATT_CHARACTERISTIC(BLE_RX_UUID,
                         BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-                        BT_GATT_PERM_WRITE, nullptr, OnRxWrite, nullptr),
+                        BT_GATT_PERM_WRITE, nullptr, OnRxWriteCallback, nullptr),
   BT_GATT_CHARACTERISTIC(BLE_TX_UUID,
                         BT_GATT_CHRC_NOTIFY,
                         BT_GATT_PERM_NONE, nullptr, nullptr, nullptr),
@@ -77,15 +73,15 @@ Ble::~Ble() {
 int Ble::Init() {
   int err;
 
+  // 保存实例指针供回调使用
+  instance_ = this;
+
   // 初始化 BLE 堆栈
   err = bt_enable(nullptr);
   if (err) {
     printk("BLE enable failed: %d\n", err);
     return err;
   }
-
-  // 保存实例指针供回调使用
-  g_ble_instance = this;
 
   initialized_ = true;
   printk("BLE initialized\n");
@@ -126,20 +122,39 @@ int Ble::StartAdvertising() {
 }
 
 int Ble::SendData(const uint8_t* data, uint16_t len) {
-  if (!g_ble_connected || g_conn == nullptr) {
+  if (!connected_ || conn_ == nullptr) {
     return -1;
   }
 
-  return bt_gatt_notify(g_conn, nullptr, data, len);
+  return bt_gatt_notify(conn_, nullptr, data, len);
 }
 
 void Ble::SetReceiveCallback(BleDataCallback callback) {
   receive_callback_ = callback;
-  g_ble_callback = callback;
 }
 
 bool Ble::IsConnected() const {
-  return g_ble_connected;
+  return connected_;
+}
+
+void Ble::OnConnected(struct bt_conn* conn) {
+  connected_ = true;
+  conn_ = bt_conn_ref(conn);
+}
+
+void Ble::OnDisconnected(struct bt_conn* conn) {
+  (void)conn;
+  connected_ = false;
+  if (conn_) {
+    bt_conn_unref(conn_);
+    conn_ = nullptr;
+  }
+}
+
+void Ble::OnRxData(const uint8_t* data, uint16_t len) {
+  if (receive_callback_) {
+    receive_callback_(data, len);
+  }
 }
 
 void Ble::ThreadEntry(void* p1, void* p2, void* p3) {
@@ -151,7 +166,7 @@ void Ble::ThreadEntry(void* p1, void* p2, void* p3) {
   // 线程主循环
   while (true) {
     // BLE 处理可以根据需要添加周期性任务
-    // 目前 BLE 事件通过回调处理，这里可以添加心跳等逻辑
+    // printk("hello\n");
     k_msleep(100);
   }
 }
