@@ -17,5 +17,6 @@ target_include_directories(app PRIVATE ${CMAKE_SOURCE_DIR}/inc)
 # Source files (C++)
 target_sources(app PRIVATE
     src/main.cpp
-    src/ws2812.cpp
+    src/ws2812_led.cpp
+    src/ble.cpp
 )

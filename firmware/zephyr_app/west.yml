@@ -16,3 +16,4 @@ manifest:
       import:
         name-allowlist:
           - hal_espressif
+          - mbedtls

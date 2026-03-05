@@ -40,6 +40,9 @@ source .venv/bin/activate
 
 # 安装 west 和其他 Python 依赖
 pip install west pyelftools intelhex pyserial
+
+# 安装 Zephyr 官方 Python 依赖 (重要！)
+pip install -r JRemote_Controller/firmware/zephyr/scripts/requirements.txt
 ```
 
 ### 2. 初始化 Zephyr 项目
@@ -53,6 +56,13 @@ west init -l zephyr_app
 
 ```bash
 west update
+```
+
+### 4. 获取 ESP32 芯片二进制 blobs (重要！)
+
+```bash
+# 获取 hal_espressif 的二进制文件
+west blobs fetch hal_espressif
 ```
 
 ## 构建和烧录
