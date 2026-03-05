@@ -1,0 +1,11 @@
+# JRemote Controller - Kconfig
+
+mainmenu "JRemote Controller"
+
+source "$ZEPHYR_BASE/Kconfig.zephyr"
+
+config APP_VERSION
+    string "Application version"
+    default "0.1.0"
+    help
+        Firmware version

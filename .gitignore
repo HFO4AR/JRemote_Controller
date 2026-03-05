@@ -7,7 +7,6 @@
 
 # Claude Code files
 .claude/
-CLAUDE.md
 
 # Build outputs
 build/
@@ -76,3 +75,18 @@ keystore/
 
 # Git worktrees
 .worktrees/
+
+# Zephyr
+firmware/zephyr/
+firmware/zephyr_app/zephyr/
+firmware/zephyr_app/modules/
+firmware/zephyr_app/.venv/
+firmware/build/
+firmware/.west/
+.zephyr/
+*.elf
+*.bin
+*.map
+*.stat
+*.dts
+*.dtsi
