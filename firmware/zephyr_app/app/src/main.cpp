@@ -89,24 +89,22 @@ int main(void)
 
 	// 主循环
 	while (true) {
-		// 读取 MCU 发来的数据并转发到 BLE
-		uint8_t rx_buf[64]="test";
-		int32_t len = g_serial.Write(rx_buf, sizeof(rx_buf));
-		LOG_INF("test");
-		if (len > 0 && g_ble.IsConnected()) {
-			g_ble.SendData(rx_buf, len);
-		}
+		uint8_t tx_buf[64];
+		g_ble.SendData(tx_buf, sizeof(tx_buf));
+
 
 		// 根据连接状态改变 LED 颜色
 		if (g_ble.IsConnected()) {
 			// 已连接 - 绿色
 			led.SetColor(0, 255, 0);
+			k_sleep(K_MSEC(10));
 		} else {
 			// 未连接 - 蓝色
 			led.SetColor(0, 0, 255);
+			k_sleep(K_MSEC(100));
 		}
 
-		k_sleep(K_MSEC(100));
+
 	}
 
 	return 0;

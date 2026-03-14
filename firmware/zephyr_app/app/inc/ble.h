@@ -44,6 +44,9 @@ public:
 	// 获取连接状态
 	bool IsConnected() const;
 
+	// 获取通知订阅状态
+	bool IsSubscribed() const;
+
 	// 获取当前 MTU
 	uint16_t GetMtu() const;
 
@@ -52,6 +55,7 @@ public:
 	void OnDisconnected(struct bt_conn* conn);
 	void OnRxData(const uint8_t* data, uint16_t len);
 	void OnMtuExchanged(struct bt_conn* conn);
+	void OnCccChanged(uint16_t value);
 
 	// 静态实例指针 (供回调使用)
 	static Ble* instance_;
@@ -68,6 +72,7 @@ private:
 	// 成员变量
 	bool initialized_;
 	bool connected_;
+	bool subscribed_;
 	struct bt_conn* conn_;
 	BleDataCallback receive_callback_;
 	uint16_t mtu_;

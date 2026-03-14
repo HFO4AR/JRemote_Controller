@@ -78,10 +78,8 @@ static ssize_t OnRxWriteCallback(struct bt_conn* conn,
 // CCC 配置回调
 static void OnCccConfigChangedCallback(const struct bt_gatt_attr* attr,
 									   uint16_t value) {
-	if (value == BT_GATT_CCC_NOTIFY) {
-		LOG_INF("Client enabled notifications");
-	} else {
-		LOG_INF("Client disabled notifications");
+	if (Ble::instance_) {
+		Ble::instance_->OnCccChanged(value);
 	}
 }
 
@@ -99,7 +97,7 @@ BT_GATT_SERVICE_DEFINE(ble_gatt_service,
 
 Ble::Ble(k_thread_stack_t* stack, size_t stack_size)
 	: stack_(stack), stack_size_(stack_size),
-	  initialized_(false), connected_(false), conn_(nullptr),
+	  initialized_(false), connected_(false), subscribed_(false), conn_(nullptr),
 	  receive_callback_(nullptr), mtu_(23) {
 }
 
@@ -172,6 +170,10 @@ int Ble::SendData(const uint8_t* data, uint16_t len) {
 		return -1;
 	}
 
+	if (!subscribed_) {
+		return -2;
+	}
+
 	// 使用 TX 特征发送通知
 	const struct bt_gatt_attr* attr = &ble_gatt_service.attrs[3];
 	return bt_gatt_notify(conn_, attr, data, len);
@@ -183,6 +185,10 @@ void Ble::SetReceiveCallback(BleDataCallback callback) {
 
 bool Ble::IsConnected() const {
 	return connected_;
+}
+
+bool Ble::IsSubscribed() const {
+	return subscribed_;
 }
 
 uint16_t Ble::GetMtu() const {
@@ -206,6 +212,7 @@ void Ble::OnConnected(struct bt_conn* conn) {
 void Ble::OnDisconnected(struct bt_conn* conn) {
 	(void)conn;
 	connected_ = false;
+	subscribed_ = false;
 	mtu_ = 23;
 	if (conn_) {
 		bt_conn_unref(conn_);
@@ -216,6 +223,16 @@ void Ble::OnDisconnected(struct bt_conn* conn) {
 	StartAdvertising();
 }
 
+void Ble::OnCccChanged(uint16_t value) {
+	if (value == BT_GATT_CCC_NOTIFY) {
+		subscribed_ = true;
+		LOG_INF("Client subscribed to notifications");
+	} else {
+		subscribed_ = false;
+		LOG_INF("Client unsubscribed from notifications");
+	}
+}
+
 void Ble::OnMtuExchanged(struct bt_conn* conn) {
 	// 获取当前 MTU
 	mtu_ = bt_gatt_get_mtu(conn);
@@ -223,12 +240,13 @@ void Ble::OnMtuExchanged(struct bt_conn* conn) {
 }
 
 void Ble::OnRxData(const uint8_t* data, uint16_t len) {
+	LOG_INF("RX data: %s", data);
 	// 检查是否是 Ping 请求
 	if (len == 1 && data[0] == kPingRequest) {
 		// 响应 Ping
 		uint8_t response = kPingResponse;
 		SendData(&response, 1);
-		LOG_DBG("Ping received, responded");
+		LOG_INF("Ping received, responded");
 		return;
 	}
 
