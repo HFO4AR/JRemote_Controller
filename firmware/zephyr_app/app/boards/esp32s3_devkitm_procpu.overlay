@@ -1,6 +1,7 @@
 /*
  * JRemote Controller - Device Tree Overlay
  * WS2812 LED Configuration using SPI
+ * UART Configuration for MCU Communication
  */
 
 #include <zephyr/dt-bindings/led/led.h>
@@ -33,6 +34,14 @@
 			pinmux = <SPIM3_MOSI_GPIO48>;
 		};
 	};
+};
+
+&uart1 {
+	status = "okay";
+	current-speed = <115200>;
+
+	pinctrl-0 = <&uart1_default>;
+	pinctrl-names = "default";
 };
 
 / {

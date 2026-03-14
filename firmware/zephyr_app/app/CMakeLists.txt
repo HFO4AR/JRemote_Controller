@@ -19,4 +19,5 @@ target_sources(app PRIVATE
     src/main.cpp
     src/ws2812_led.cpp
     src/ble.cpp
+    src/control_data.cpp
 )
