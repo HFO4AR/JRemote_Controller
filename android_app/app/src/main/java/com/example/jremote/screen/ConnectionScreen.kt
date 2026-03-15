@@ -3,6 +3,10 @@ package com.example.jremote.screen
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -48,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,10 +62,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.DiscoveredDevice
 
@@ -88,8 +97,30 @@ fun ConnectionScreen(
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var hasPermissions by remember { mutableStateOf(false) }
+    var locationEnabled by remember { mutableStateOf(false) }
     var connectingAddress by remember { mutableStateOf<String?>(null) }
+
+    // 检查位置服务是否开启
+    fun checkLocationEnabled() {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    // 监听生命周期，在 resume 时检查位置服务
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                checkLocationEnabled()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // 连接成功或失败后清除连接状态
     LaunchedEffect(isConnected) {
@@ -128,13 +159,20 @@ fun ConnectionScreen(
         } else {
             hasPermissions = true
         }
+
+        // 检查位置服务
+        checkLocationEnabled()
     }
 
     // 进入页面根据模式自动扫描
-    LaunchedEffect(hasPermissions, currentConnectionMode) {
+    LaunchedEffect(hasPermissions, locationEnabled, currentConnectionMode, isConnected) {
         if (hasPermissions && !isConnected) {
             when (currentConnectionMode) {
-                ConnectionType.BLUETOOTH -> onStartScan()
+                ConnectionType.BLUETOOTH -> {
+                    if (locationEnabled) {
+                        onStartScan()
+                    }
+                }
                 ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> onStartWifiScan(currentConnectionMode)
                 ConnectionType.USB -> { /* USB 模式暂不支持扫描 */ }
             }
@@ -287,6 +325,43 @@ fun ConnectionScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+            } else if (currentConnectionMode == ConnectionType.BLUETOOTH && !locationEnabled) {
+                // 位置服务未开启
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "需要开启位置服务",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "BLE 扫描需要位置服务才能工作",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                // 打开位置设置
+                                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                context.startActivity(intent)
+                            }
+                        ) {
+                            Text("打开设置")
+                        }
                     }
                 }
             } else {

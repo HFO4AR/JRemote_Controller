@@ -1,27 +1,27 @@
 /*
- * JRemote Controller - Device Tree Overlay
- * WS2812 LED Configuration using SPI
- * UART Configuration for MCU Communication
+ * JRemote Controller - 设备树覆盖层
+ * WS2812 LED SPI 配置
+ * UART MCU 通信配置
  */
 
 #include <zephyr/dt-bindings/led/led.h>
 
 &spi3 {
-	/* Workaround to support WS2812 driver */
+	/* WS2812 驱动支持 */
 	line-idle-low;
 
 	led_strip: ws2812@0 {
 		compatible = "worldsemi,ws2812-spi";
 
-		/* SPI */
+		/* SPI 配置 */
 		reg = <0>;
 		spi-max-frequency = <6400000>;
 
-		/* WS2812 */
+		/* WS2812 配置 */
 		chain-length = <1>;
 		spi-cpha;
-		spi-one-frame = <0xf0>;  /* 11110000: 625 ns high and 625 ns low */
-		spi-zero-frame = <0xc0>;  /* 11000000: 312.5 ns high and 937.5 ns low */
+		spi-one-frame = <0xf0>;  /* 11110000: 625ns 高电平 + 625ns 低电平 */
+		spi-zero-frame = <0xc0>;  /* 11000000: 312.5ns 高电平 + 937.5ns 低电平 */
 		color-mapping = <LED_COLOR_ID_GREEN
 				 LED_COLOR_ID_RED
 				 LED_COLOR_ID_BLUE>;
@@ -45,7 +45,8 @@
 		};
 	};
 };
-//muc通信
+
+/* MCU 通信 UART */
 &uart1 {
 	status = "okay";
 	current-speed = <115200>;

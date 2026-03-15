@@ -13,6 +13,7 @@ import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.DiscoveredDevice
 import com.example.jremote.data.JoystickState
+import com.example.jremote.data.SerialMessage
 import com.example.jremote.data.SettingsRepository
 import com.example.jremote.wifi.WifiService
 import com.example.jremote.wifi.UdpDiscovery
@@ -34,16 +35,16 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     private val wifiService = WifiService(application)
     private val udpDiscovery = UdpDiscovery(application)
     private val settingsRepository = SettingsRepository(application)
-    
+
     private val _leftJoystickState = MutableStateFlow(JoystickState())
     val leftJoystickState: StateFlow<JoystickState> = _leftJoystickState.asStateFlow()
-    
+
     private val _rightJoystickState = MutableStateFlow(JoystickState())
     val rightJoystickState: StateFlow<JoystickState> = _rightJoystickState.asStateFlow()
-    
+
     private val _buttonStates = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     val buttonStates: StateFlow<Map<Int, Boolean>> = _buttonStates.asStateFlow()
-    
+
     private val defaultButtonConfigs = listOf(
         ButtonConfig(0, "LX", 0x01.toByte()),
         ButtonConfig(1, "LY", 0x02.toByte()),
@@ -60,10 +61,10 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         ButtonConfig(12, "R3", 0x00.toByte(), isToggle = true),
         ButtonConfig(13, "R4", 0x00.toByte(), isToggle = true)
     )
-    
+
     private val _buttonConfigs = MutableStateFlow(defaultButtonConfigs)
     val buttonConfigs: StateFlow<List<ButtonConfig>> = _buttonConfigs.asStateFlow()
-    
+
     private val _connectionStatus = MutableStateFlow(ConnectionStatus())
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
@@ -78,6 +79,10 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
     private val _isEmergencyStopped = MutableStateFlow(false)
     val isEmergencyStopped: StateFlow<Boolean> = _isEmergencyStopped.asStateFlow()
+
+    // Serial terminal data
+    private val _serialTerminalData = MutableStateFlow<List<SerialMessage>>(emptyList())
+    val serialTerminalData: StateFlow<List<SerialMessage>> = _serialTerminalData.asStateFlow()
 
     // 根据连接模式返回延迟和信号强度
     val rssi: StateFlow<Int?> by lazy {
@@ -124,7 +129,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
                 _settings.value = settings
             }
         }
-        
+
         viewModelScope.launch {
             loadButtonConfigs()
         }
@@ -158,6 +163,13 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
                 (bleMessages + wifiMessages).takeLast(1000)
             }.collect { mergedMessages ->
                 _debugMessages.value = mergedMessages
+            }
+        }
+
+        // 监听用户数据接收
+        viewModelScope.launch {
+            bleService.userDataReceived.collect { data ->
+                data?.let { onUserDataReceived(it) }
             }
         }
     }
@@ -434,20 +446,20 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     fun clearDebugMessages() {
         bleService.clearDebugMessages()
     }
-    
+
     fun updateButtonConfig(config: ButtonConfig) {
         val configs = _buttonConfigs.value.toMutableList()
         val index = configs.indexOfFirst { it.id == config.id }
         if (index >= 0) {
             configs[index] = config
             _buttonConfigs.value = configs
-            
+
             viewModelScope.launch {
                 settingsRepository.updateButtonConfig(config.id, config.isEnabled, config.isToggle)
             }
         }
     }
-    
+
     fun updateSettings(newSettings: AppSettings) {
         // 如果自动重连设置发生变化，更新 BleService
         if (newSettings.autoReconnect != _settings.value.autoReconnect) {
@@ -459,7 +471,64 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             settingsRepository.updateAppSettings(newSettings)
         }
     }
-    
+
+    // ==================== Serial Terminal Methods ====================
+
+    /**
+     * Send user data through BLE or WiFi
+     * @param text Input text
+     * @param hexMode If true, parse as hex string; otherwise, treat as UTF-8 text
+     */
+    fun sendUserData(text: String, hexMode: Boolean) {
+        val data = if (hexMode) {
+            // Parse HEX string
+            text.split(Regex("\\s+"))
+                .filter { it.isNotEmpty() }
+                .mapNotNull {
+                    try {
+                        it.toInt(16).toByte()
+                    } catch (e: NumberFormatException) {
+                        null
+                    }
+                }
+                .toByteArray()
+        } else {
+            text.toByteArray(Charsets.UTF_8)
+        }
+
+        if (data.isEmpty()) return
+
+        // Limit payload size
+        val payload = if (data.size > 255) data.take(255).toByteArray() else data
+
+        // Build packet: frame header (0xBB) + length + payload
+        val packet = byteArrayOf(0xBB.toByte(), payload.size.toByte()) + payload
+
+        // Send through current connection
+        when (_currentConnectionMode.value) {
+            ConnectionType.BLUETOOTH -> bleService.sendData(packet)
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> wifiService.sendData(packet)
+            ConnectionType.USB -> { /* USB 暂不支持 */ }
+        }
+
+        // Record sent message
+        _serialTerminalData.value = _serialTerminalData.value + SerialMessage(payload, isReceived = false)
+    }
+
+    /**
+     * Handle received user data from device
+     */
+    private fun onUserDataReceived(data: ByteArray) {
+        _serialTerminalData.value = _serialTerminalData.value + SerialMessage(data, isReceived = true)
+    }
+
+    /**
+     * Clear serial terminal history
+     */
+    fun clearSerialTerminal() {
+        _serialTerminalData.value = emptyList()
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopSending()

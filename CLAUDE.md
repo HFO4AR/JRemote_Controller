@@ -388,6 +388,148 @@ ControlScreen
 
 ---
 
+## Zephyr 固件架构
+
+### 分层设计
+
+Zephyr 固件采用传输层与数据处理层分离的分层架构，便于后期添加 AP/LAN 模式：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Transport Layer                          │
+│  (只负责收发数据，通过消息队列将数据传递给 DataHandler)            │
+├─────────────┬─────────────┬─────────────┬─────────────────────────┤
+│    Ble      │   WifiAp    │   WifiSta   │   (未来扩展)            │
+│  (BLE传输)   │  (AP模式)   │  (LAN模式)   │                         │
+└──────┬──────┴──────┬──────┴──────┬──────┴─────────────────────────┘
+       │             │             │
+       │  k_msgq     │  k_msgq     │  k_msgq
+       ▼             ▼             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        DataHandler (路由器)                       │
+│  - 接收来自所有传输层的数据                                        │
+│  - 根据帧头路由到对应的处理器                                      │
+│  - 帧头: 0xAA -> ControlDataHandler, 0xBB -> UserDataHandler     │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│ ControlDataHandler  │       │  UserDataHandler    │
+│ (控制数据处理)       │       │  (用户数据处理)      │
+│ -> UART -> MCU      │       │  -> 回传给 App       │
+└─────────────────────┘       └─────────────────────┘
+```
+
+### 文件结构
+
+```
+firmware/zephyr_app/app/
+├── inc/
+│   ├── peripheral/              # 外设相关头文件
+│   │   ├── ble.h                # BLE 传输层
+│   │   ├── serial.h             # 串口通信
+│   │   └── ws2812_led.h         # LED 控制
+│   └── data/                    # 数据处理相关头文件
+│       ├── control_data.h       # 控制数据结构定义
+│       ├── data_handler.h       # 数据路由器
+│       ├── control_data_handler.h  # 控制数据处理器
+│       └── user_data_handler.h  # 用户数据处理器
+├── src/
+│   ├── peripheral/              # 外设相关源文件
+│   │   ├── ble.cpp              # BLE 实现
+│   │   └── ws2812_led.cpp       # LED 实现
+│   ├── data/                    # 数据处理相关源文件
+│   │   ├── data_handler.cpp     # 数据路由实现
+│   │   ├── control_data_handler.cpp  # 控制数据处理实现
+│   │   └── user_data_handler.cpp    # 用户数据处理实现
+│   └── main.cpp                 # 入口点，初始化各组件
+├── boards/                      # 开发板配置
+│   └── esp32s3_devkitm_procpu.overlay
+├── CMakeLists.txt
+├── Kconfig
+└── prj.conf
+```
+
+### 核心类
+
+| 类 | 职责 | 说明 |
+|---|------|------|
+| `Ble` | BLE 传输层 | 只负责 BLE 连接和数据收发，收到数据后调用 `DataHandler::SubmitData()` |
+| `DataHandler` | 数据路由器 | 接收所有传输层的数据，根据帧头路由到对应处理器 |
+| `ControlDataHandler` | 控制数据处理 | 解析控制数据（9字节），转发到 UART |
+| `UserDataHandler` | 用户数据处理 | 处理用户数据，回传给 App |
+| `Serial` | 串口通信 | 与 MCU 通信 |
+
+### 数据流
+
+```
+BLE RX (ISR) -> Ble::OnRxData() -> DataHandler::SubmitData() -> k_msgq
+                                                           -> DataHandler::ProcessLoop()
+                                                           -> RouteMessage()
+                                                           -> ControlDataHandler / UserDataHandler
+```
+
+### 消息队列格式
+
+```cpp
+// 统一的消息结构
+struct TransportMessage {
+    uint8_t source;      // 来源: 0=BLE, 1=AP, 2=LAN
+    uint16_t length;     // 数据长度
+    uint8_t data[255];   // 数据内容
+};
+```
+
+### 帧头定义
+
+```cpp
+enum class FrameType : uint8_t {
+    kControlData = 0xAA,  // 控制数据 (9 bytes)
+    kUserData = 0xBB,     // 用户数据 (变长)
+    kEmergency = 0xEE,    // 急停
+};
+```
+
+### 连接类型
+
+```cpp
+enum class ConnectionType : uint8_t {
+    BLE = 0,    // 蓝牙连接
+    AP = 1,     // AP 模式连接
+    LAN = 2,    // 局域网连接
+    UART = 3,   // 串口连接
+};
+```
+
+### 扩展指南
+
+添加 AP 模式时：
+
+```cpp
+class WifiAp {
+public:
+    void Init();
+    void SendData(const uint8_t* data, uint16_t len);
+    void SetDataHandler(DataHandler* handler);
+private:
+    DataHandler* data_handler_;
+};
+```
+
+WifiAp 收到数据后调用 `data_handler_->SubmitData(ConnectionType::AP, data, len)`，无需修改 DataHandler。
+
+### 构建命令
+
+```bash
+cd firmware/zephyr_app
+source .venv/bin/activate
+west build -b esp32s3_devkitm/esp32s3/procpu app
+west flash
+```
+
+---
+
 ## 开发说明
 
 - 使用 Jetpack Compose 与 Material Design 3

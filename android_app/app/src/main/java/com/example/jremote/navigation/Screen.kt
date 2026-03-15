@@ -5,4 +5,5 @@ sealed class Screen(val route: String) {
     data object Connection : Screen("connection")
     data object Settings : Screen("settings")
     data object BleConfig : Screen("ble_config")
+    data object SerialTerminal : Screen("serial_terminal")
 }

@@ -18,6 +18,7 @@ import com.example.jremote.navigation.Screen
 import com.example.jremote.screen.BleConfigScreen
 import com.example.jremote.screen.ConnectionScreen
 import com.example.jremote.screen.ControlScreen
+import com.example.jremote.screen.SerialTerminalScreen
 import com.example.jremote.screen.SettingsScreen
 import com.example.jremote.ui.theme.JRemoteTheme
 import com.example.jremote.viewmodel.BleConfigViewModel
@@ -135,7 +136,8 @@ fun AppNavigation(
                 settings = settings,
                 onUpdateButtonConfig = { viewModel.updateButtonConfig(it) },
                 onUpdateSettings = { viewModel.updateSettings(it) },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onSerialTerminalClick = { navController.navigate(Screen.SerialTerminal.route) }
             )
         }
 
@@ -160,6 +162,13 @@ fun AppNavigation(
                 onReadCurrentWifi = { configViewModel.readCurrentWifi() },
                 onStartScan = { configViewModel.startScan() },
                 onConnectToDevice = { address -> configViewModel.connectToDevice(address) },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.SerialTerminal.route) {
+            SerialTerminalScreen(
+                viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

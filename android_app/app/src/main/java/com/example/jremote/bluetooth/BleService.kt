@@ -67,6 +67,10 @@ class BleService(private val context: Context) {
     private val _receivedData = MutableStateFlow<ByteArray?>(null)
     val receivedData: StateFlow<ByteArray?> = _receivedData.asStateFlow()
 
+    // User data received from device (for serial terminal)
+    private val _userDataReceived = MutableStateFlow<ByteArray?>(null)
+    val userDataReceived: StateFlow<ByteArray?> = _userDataReceived.asStateFlow()
+
     private val _scannedDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val scannedDevices: StateFlow<List<BluetoothDevice>> = _scannedDevices.asStateFlow()
 
@@ -178,28 +182,61 @@ class BleService(private val context: Context) {
         
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             val data = characteristic.value
-            _receivedData.value = data
 
-            // 检查是否是 ping 响应
-            if (data.size == 1 && data[0] == 0x50.toByte()) { // 'P'
-                val currentTime = System.currentTimeMillis()
-                val latency = (currentTime - lastPingTime).toInt()
-                _latency.value = latency
-                return
-            }
+            // Check frame header for routing
+            if (data.isNotEmpty()) {
+                when (data[0]) {
+                    0xAA.toByte() -> {
+                        // Control data (0xAA) - original handling
+                        _receivedData.value = data
 
-            // 尝试将数据解析为字符串显示
-            val hexString = data.joinToString(" ") { String.format("%02X", it) }
-            val textString = try {
-                String(data, Charsets.UTF_8).filter { it.code in 32..126 }
-            } catch (e: Exception) {
-                ""
-            }
+                        // Try to parse as string for debug display
+                        val hexString = data.joinToString(" ") { String.format("%02X", it) }
+                        val textString = try {
+                            String(data, Charsets.UTF_8).filter { it.code in 32..126 }
+                        } catch (e: Exception) {
+                            ""
+                        }
 
-            if (textString.isNotEmpty()) {
-                addDebugMessage(DebugLevel.INFO, "MCU", textString)
+                        if (textString.isNotEmpty()) {
+                            addDebugMessage(DebugLevel.INFO, "MCU", textString)
+                        } else {
+                            addDebugMessage(DebugLevel.INFO, "MCU", "HEX: $hexString")
+                        }
+                    }
+                    0xBB.toByte() -> {
+                        // User data (0xBB) - variable length
+                        if (data.size >= 2) {
+                            val payloadLen = (data[1].toInt() and 0xFF)
+                            if (data.size >= 2 + payloadLen) {
+                                val payload = data.copyOfRange(2, 2 + payloadLen)
+                                _userDataReceived.value = payload
+
+                                // Debug output
+                                val hexString = payload.joinToString(" ") { String.format("%02X", it) }
+                                addDebugMessage(DebugLevel.INFO, "Serial", "RX: $hexString")
+                            }
+                        }
+                    }
+                    0x50.toByte() -> {
+                        // Ping response ('P')
+                        if (data.size == 1) {
+                            val currentTime = System.currentTimeMillis()
+                            val latency = (currentTime - lastPingTime).toInt()
+                            _latency.value = latency
+                        }
+                    }
+                    else -> {
+                        // Unknown frame header - treat as raw data
+                        _receivedData.value = data
+
+                        val hexString = data.joinToString(" ") { String.format("%02X", it) }
+                        addDebugMessage(DebugLevel.INFO, "MCU", "HEX: $hexString")
+                    }
+                }
             } else {
-                addDebugMessage(DebugLevel.INFO, "MCU", "HEX: $hexString")
+                // Empty data - original handling
+                _receivedData.value = data
             }
         }
         
@@ -229,7 +266,7 @@ class BleService(private val context: Context) {
     
     @Suppress("DEPRECATION")
     fun getBondedDevices(): List<BluetoothDevice> {
-        if (!hasBluetoothPermissions()) {
+        if (!hasBluetoothConnectPermission()) {
             addDebugMessage(DebugLevel.ERROR, TAG, "缺少蓝牙权限")
             return emptyList()
         }
@@ -242,15 +279,20 @@ class BleService(private val context: Context) {
             addDebugMessage(DebugLevel.ERROR, TAG, "缺少蓝牙权限")
             return
         }
-        
+
+        if (!isBluetoothEnabled()) {
+            addDebugMessage(DebugLevel.ERROR, TAG, "蓝牙未开启")
+            return
+        }
+
         if (_isScanning.value) {
             stopBleScan()
         }
-        
+
         _scannedDevices.value = emptyList()
         _isScanning.value = true
         addDebugMessage(DebugLevel.INFO, TAG, "开始扫描 BLE 设备...")
-        
+
         val scanner = bluetoothAdapter?.bluetoothLeScanner
         if (scanner == null) {
             addDebugMessage(DebugLevel.ERROR, TAG, "无法获取 BLE 扫描器")
@@ -279,7 +321,15 @@ class BleService(private val context: Context) {
             }
             
             override fun onScanFailed(errorCode: Int) {
-                addDebugMessage(DebugLevel.ERROR, TAG, "扫描失败: $errorCode")
+                val errorMsg = when (errorCode) {
+                    SCAN_FAILED_ALREADY_STARTING -> "SCAN_FAILED_ALREADY_STARTING"
+                    SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "SCAN_FAILED_APPLICATION_REGISTRATION_FAILED"
+                    SCAN_FAILED_INTERNAL_ERROR -> "SCAN_FAILED_INTERNAL_ERROR"
+                    SCAN_FAILED_FEATURE_UNSUPPORTED -> "SCAN_FAILED_FEATURE_UNSUPPORTED"
+                    5 -> "SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES"
+                    else -> "未知错误 ($errorCode)"
+                }
+                addDebugMessage(DebugLevel.ERROR, TAG, "扫描失败: $errorMsg")
                 _isScanning.value = false
             }
         }
@@ -313,13 +363,31 @@ class BleService(private val context: Context) {
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_SCAN
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
         } else {
             arrayOf(
                 Manifest.permission.BLUETOOTH,
-                Manifest.permission.BLUETOOTH_ADMIN
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
+        }
+        val missingPermissions = permissions.filter {
+            context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missingPermissions.isNotEmpty()) {
+            addDebugMessage(DebugLevel.ERROR, TAG, "缺少权限: ${missingPermissions.joinToString()}")
+            return false
+        }
+        return true
+    }
+
+    private fun hasBluetoothConnectPermission(): Boolean {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            arrayOf(Manifest.permission.BLUETOOTH)
         }
         return permissions.all {
             context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
@@ -341,8 +409,8 @@ class BleService(private val context: Context) {
     
     @Suppress("MissingPermission")
     suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
-        if (!hasBluetoothPermissions()) {
-            addDebugMessage(DebugLevel.ERROR, TAG, "缺少蓝牙权限")
+        if (!hasBluetoothConnectPermission()) {
+            addDebugMessage(DebugLevel.ERROR, TAG, "缺少蓝牙连接权限")
             return@withContext false
         }
 
