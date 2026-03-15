@@ -6,7 +6,12 @@
 #include "control_data.h"
 #include "control_data_handler.h"
 #include "user_data_handler.h"
+#include "zephyr/logging/log.h"
+#include "ble.h"
+#include "serial.h"
 
+extern Serial<512, 256> g_serial;
+extern Ble g_ble;
 // 最大消息大小
 constexpr size_t kMaxMessageSize = 255;
 
@@ -23,6 +28,12 @@ struct TransportMessage {
 // 数据回调类型
 using ControlDataCallback = void (*)(const uint8_t* data, uint16_t len, ConnectionType source);
 using UserDataCallback = void (*)(const uint8_t* data, uint16_t len, ConnectionType source);
+
+// 控制数据回调（由 DataHandler 调用）
+void OnControlDataCallback(const uint8_t* data, uint16_t len, ConnectionType source);
+
+// 用户数据回调（由 DataHandler 调用）
+void OnUserDataCallback(const uint8_t* data, uint16_t len, ConnectionType source);
 
 // DataHandler 类 - 将传输层数据路由到相应的处理器
 class DataHandler {
@@ -72,5 +83,4 @@ private:
 	// 路由消息到相应的处理器
 	void RouteMessage(const TransportMessage& msg);
 };
-
 #endif  // DATA_HANDLER_H

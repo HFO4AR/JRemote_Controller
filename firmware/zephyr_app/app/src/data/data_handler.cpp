@@ -7,6 +7,49 @@ LOG_MODULE_REGISTER(data_handler);
 // 线程栈
 K_THREAD_STACK_DEFINE(data_handler_stack, 2048);
 
+// 控制数据回调（由 DataHandler 调用）
+void OnControlDataCallback(const uint8_t* data, uint16_t len, ConnectionType source) {
+	if (len < kControlDataLen) {
+		LOG_WRN("控制数据过短: %u", len);
+		return;
+	}
+
+	// 解析控制数据
+	ControlData control_data;
+	memcpy(&control_data, data, sizeof(ControlData));
+
+	if (control_data.header == static_cast<uint8_t>(FrameType::kEmergency)) {
+		LOG_WRN("收到急停指令，来源: %u!", static_cast<uint8_t>(source));
+		// TODO: 执行急停逻辑
+	} else {
+		LOG_DBG("控制数据: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
+				(int)control_data.left_x, (int)control_data.left_y,
+				(int)control_data.right_x, (int)control_data.right_y,
+				(unsigned int)control_data.buttons);
+	}
+
+	// 转发控制数据到 MCU（通过 UART）
+	g_serial.SendData(data, len);
+}
+
+// 用户数据回调（由 DataHandler 调用）
+void OnUserDataCallback(const uint8_t* data, uint16_t len, ConnectionType source) {
+	LOG_INF("收到用户数据: %u 字节，来源: %u", len, static_cast<uint8_t>(source));
+
+	// 回传用户数据到 App（通过 BLE TX）
+	// 构造响应包：帧头 + 长度 + 数据
+	uint8_t response[2 + 255];
+	response[0] = static_cast<uint8_t>(FrameType::kUserData);
+	response[1] = static_cast<uint8_t>(len);
+	if (len > 0 && len <= 255) {
+		memcpy(&response[2], data, len);
+		g_ble.SendData(response, 2 + len);
+	}
+
+	// 可选：转发用户数据到 MCU（通过 UART）
+	// g_serial.SendData(data, len);
+}
+
 DataHandler::DataHandler()
 	: control_callback_(nullptr), user_callback_(nullptr) {
 	// 初始化消息队列
