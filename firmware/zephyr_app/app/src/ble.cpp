@@ -175,7 +175,9 @@ int Ble::SendData(const uint8_t* data, uint16_t len) {
 	}
 
 	// 使用 TX 特征发送通知
-	const struct bt_gatt_attr* attr = &ble_gatt_service.attrs[3];
+	// attrs[0] = Primary Service, attrs[1] = RX decl, attrs[2] = RX value
+	// attrs[3] = TX decl, attrs[4] = TX value, attrs[5] = CCC
+	const struct bt_gatt_attr* attr = &ble_gatt_service.attrs[4];
 	return bt_gatt_notify(conn_, attr, data, len);
 }
 

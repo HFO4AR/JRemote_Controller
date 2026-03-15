@@ -39,8 +39,10 @@ class BleService(private val context: Context) {
         private const val TAG = "BleService"
 
         val SERVICE_UUID: UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
-        val CHARACTERISTIC_UUID_RX: UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
-        val CHARACTERISTIC_UUID_TX: UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
+        // TX: 设备发送 (Notify) - App 订阅此特征接收数据
+        val CHARACTERISTIC_UUID_TX: UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
+        // RX: 设备接收 (Write) - App 向此特征写入数据
+        val CHARACTERISTIC_UUID_RX: UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
         val CLIENT_CHARACTERISTIC_CONFIG: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 

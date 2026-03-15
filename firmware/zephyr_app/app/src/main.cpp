@@ -39,7 +39,7 @@ static void OnControlDataReceived(const ControlData& data) {
 		// TODO: 执行急停逻辑
 	} else {
 		LOG_INF("Control data: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
-				data.left_x, data.left_y, data.right_x, data.right_y, data.buttons);
+				(int)data.left_x, (int)data.left_y, (int)data.right_x, (int)data.right_y, (int)data.buttons);
 	}
 
 	// 转发控制数据到 MCU (通过 UART)

@@ -47,7 +47,7 @@ public:
 	 * @brief 发送数据
 	 * @note DMA 模式下会阻塞直到发送完成，但由 DMA 搬运，不消耗 CPU 周期
 	 */
-	bool SendData(const uint8_t* data, uint32_t length);
+	bool SendData(const uint8_t* data, uint32_t len);
 
 	/**
 	 * @brief 读取数据 (从 RingBuffer 取)
@@ -179,8 +179,8 @@ bool Serial<RB_SZ, DMA_SZ>::SetMode(SerialMode mode) {
 }
 
 template <size_t RB_SZ, size_t DMA_SZ>
-bool Serial<RB_SZ, DMA_SZ>::SendData(const uint8_t* data, uint32_t length) {
-	if (!data || length == 0) return false;
+bool Serial<RB_SZ, DMA_SZ>::SendData(const uint8_t* data, uint32_t len) {
+	if (!data || len == 0) return false;
 
 	// 1. 加锁，确保多线程安全
 	k_mutex_lock(&tx_mutex_, K_FOREVER);
@@ -190,8 +190,8 @@ bool Serial<RB_SZ, DMA_SZ>::SendData(const uint8_t* data, uint32_t length) {
 #ifdef CONFIG_UART_ASYNC_API
 		// DMA 模式分块发送（如果数据长度超过内部 TX Buffer）
 		uint32_t sent = 0;
-		while (sent < length) {
-			uint32_t chunk = length - sent;
+		while (sent < len) {
+			uint32_t chunk = len - sent;
 			if (chunk > DMA_SZ) chunk = DMA_SZ;
 
 			// 拷贝到内部 RAM buffer (必须步骤，防止 data 指向栈内存或 Flash)
@@ -214,7 +214,7 @@ bool Serial<RB_SZ, DMA_SZ>::SendData(const uint8_t* data, uint32_t length) {
 #endif
 	} else {
 		// 轮询模式 / 中断模式下的发送
-		for (uint32_t i = 0; i < length; i++) {
+		for (uint32_t i = 0; i < len; i++) {
 			uart_poll_out(dev_, data[i]);
 		}
 	}
