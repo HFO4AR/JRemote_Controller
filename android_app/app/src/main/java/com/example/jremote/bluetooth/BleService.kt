@@ -322,10 +322,10 @@ class BleService(private val context: Context) {
             
             override fun onScanFailed(errorCode: Int) {
                 val errorMsg = when (errorCode) {
-                    SCAN_FAILED_ALREADY_STARTING -> "SCAN_FAILED_ALREADY_STARTING"
-                    SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "SCAN_FAILED_APPLICATION_REGISTRATION_FAILED"
-                    SCAN_FAILED_INTERNAL_ERROR -> "SCAN_FAILED_INTERNAL_ERROR"
-                    SCAN_FAILED_FEATURE_UNSUPPORTED -> "SCAN_FAILED_FEATURE_UNSUPPORTED"
+                    ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "SCAN_FAILED_APPLICATION_REGISTRATION_FAILED"
+                    ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "SCAN_FAILED_INTERNAL_ERROR"
+                    ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "SCAN_FAILED_FEATURE_UNSUPPORTED"
+                    1 -> "SCAN_FAILED_ALREADY_STARTING"
                     5 -> "SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES"
                     else -> "未知错误 ($errorCode)"
                 }

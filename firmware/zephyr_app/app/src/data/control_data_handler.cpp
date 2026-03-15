@@ -2,6 +2,8 @@
 #include <zephyr/logging/log.h>
 #include <cstring>
 
+#include "data_handler.h"
+
 LOG_MODULE_REGISTER(control_data_handler);
 
 ControlDataHandler::ControlDataHandler()
@@ -24,7 +26,7 @@ void ControlDataHandler::ProcessData(const uint8_t* data, uint16_t len, Connecti
 		is_emergency_ = true;
 		LOG_WRN("收到急停指令，来源: %u", static_cast<uint8_t>(source));
 	} else {
-		LOG_DBG("控制数据: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
+		LOG_INF("控制数据: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
 				(int)latest_data_.left_x, (int)latest_data_.left_y,
 				(int)latest_data_.right_x, (int)latest_data_.right_y,
 				(unsigned int)latest_data_.buttons);
