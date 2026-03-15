@@ -47,7 +47,7 @@ public:
 	 * @brief 发送数据
 	 * @note DMA 模式下会阻塞直到发送完成，但由 DMA 搬运，不消耗 CPU 周期
 	 */
-	bool Write(const uint8_t* data, uint32_t length);
+	bool SendData(const uint8_t* data, uint32_t length);
 
 	/**
 	 * @brief 读取数据 (从 RingBuffer 取)
@@ -179,7 +179,7 @@ bool Serial<RB_SZ, DMA_SZ>::SetMode(SerialMode mode) {
 }
 
 template <size_t RB_SZ, size_t DMA_SZ>
-bool Serial<RB_SZ, DMA_SZ>::Write(const uint8_t* data, uint32_t length) {
+bool Serial<RB_SZ, DMA_SZ>::SendData(const uint8_t* data, uint32_t length) {
 	if (!data || length == 0) return false;
 
 	// 1. 加锁，确保多线程安全

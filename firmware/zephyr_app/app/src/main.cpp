@@ -44,7 +44,7 @@ static void OnControlDataReceived(const ControlData& data) {
 
 	// 转发控制数据到 MCU (通过 UART)
 	const uint8_t* raw_data = reinterpret_cast<const uint8_t*>(&data);
-	g_serial.Write(raw_data, sizeof(ControlData));
+	g_serial.SendData(raw_data, sizeof(ControlData));
 }
 
 // BLE 数据接收回调
@@ -89,8 +89,9 @@ int main(void)
 
 	// 主循环
 	while (true) {
-		uint8_t tx_buf[64];
+		uint8_t tx_buf[]="test message";
 		g_ble.SendData(tx_buf, sizeof(tx_buf));
+		g_serial.SendData(tx_buf, sizeof(tx_buf));
 
 
 		// 根据连接状态改变 LED 颜色
