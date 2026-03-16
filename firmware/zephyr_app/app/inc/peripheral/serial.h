@@ -39,7 +39,7 @@ public:
 	 * @param parity 校验位，默认为无校验
 	 */
 	explicit Serial(const struct device* dev, SerialMode mode = kPolling, uint32_t baudrate = 115200,
-					uint8_t data_bits = 8, uint8_t stop_bits = 1, uint8_t parity = UART_CFG_PARITY_NONE);
+	                uint8_t data_bits = 8, uint8_t stop_bits = 1, uint8_t parity = UART_CFG_PARITY_NONE);
 
 	~Serial();
 
@@ -244,8 +244,9 @@ int32_t Serial<RB_SZ, DMA_SZ>::Read(uint8_t* data, uint32_t max_len) {
 
 template <size_t RB_SZ, size_t DMA_SZ>
 void Serial<RB_SZ, DMA_SZ>::AsyncCallback(const struct device* dev,
-										  struct uart_event* evt,
-										  void* user_data) {
+                                          struct uart_event* evt,
+                                          void* user_data)
+{
 #ifdef CONFIG_UART_ASYNC_API
 	// 将 user_data 强转回当前类实例指针
 	Serial* self = static_cast<Serial*>(user_data);

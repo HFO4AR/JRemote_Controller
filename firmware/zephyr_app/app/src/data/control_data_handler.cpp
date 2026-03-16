@@ -30,5 +30,7 @@ void ControlDataHandler::ProcessData(const uint8_t* data, uint16_t len, Connecti
 				(int)latest_data_.left_x, (int)latest_data_.left_y,
 				(int)latest_data_.right_x, (int)latest_data_.right_y,
 				(unsigned int)latest_data_.buttons);
+		//数据转发
+		g_serial.SendData(reinterpret_cast<uint8_t*>(&latest_data_), sizeof(latest_data_));
 	}
 }

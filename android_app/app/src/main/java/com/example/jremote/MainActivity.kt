@@ -14,6 +14,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.jremote.data.ConnectionType
 import com.example.jremote.navigation.Screen
 import com.example.jremote.screen.BleConfigScreen
 import com.example.jremote.screen.ConnectionScreen
@@ -120,13 +121,26 @@ fun AppNavigation(
                 onDisconnect = { viewModel.disconnect() },
                 onRemoveBond = { address -> viewModel.removeBond(address) },
                 onStartScan = { viewModel.startBleScan() },
-                onStopScan = { viewModel.stopBleScan() },
                 onStartWifiScan = { mode -> viewModel.startWifiDiscovery(mode) },
                 onStopWifiScan = { viewModel.stopWifiDiscovery() },
                 onConnectWifiDevice = { device -> viewModel.connectToWifiDevice(device) },
                 onSetConnectionMode = { mode -> viewModel.setConnectionMode(mode) },
                 onConfigWifi = { navController.navigate(Screen.BleConfig.route) },
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onRefresh = {
+                    when (currentConnectionMode) {
+                        ConnectionType.BLUETOOTH -> viewModel.startBleScan()
+                        ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> viewModel.startWifiDiscovery(currentConnectionMode)
+                        ConnectionType.USB -> { /* USB 不支持 */ }
+                    }
+                },
+                onStopScan = {
+                    when (currentConnectionMode) {
+                        ConnectionType.BLUETOOTH -> viewModel.stopBleScan()
+                        ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> viewModel.stopWifiDiscovery()
+                        ConnectionType.USB -> { /* USB 不支持 */ }
+                    }
+                }
             )
         }
 

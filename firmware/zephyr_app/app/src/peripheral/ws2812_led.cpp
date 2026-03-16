@@ -26,6 +26,7 @@ void Ws2812Led::SetColor(uint8_t r, uint8_t g, uint8_t b) {
 
 void Ws2812Led::SetColor(RgbColor color) {
 	current_color_ = color;
+	Show();
 }
 
 RgbColor Ws2812Led::GetColor() const {

@@ -68,6 +68,10 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     private val _connectionStatus = MutableStateFlow(ConnectionStatus())
     val connectionStatus: StateFlow<ConnectionStatus> = _connectionStatus.asStateFlow()
 
+    // Separate connection status for BLE and WiFi to avoid conflicts
+    private val _bleConnectionStatus = MutableStateFlow(ConnectionStatus())
+    private val _wifiConnectionStatus = MutableStateFlow(ConnectionStatus())
+
     private val _debugMessages = MutableStateFlow<List<DebugMessage>>(emptyList())
     val debugMessages: StateFlow<List<DebugMessage>> = _debugMessages.asStateFlow()
 
@@ -106,8 +110,10 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var sendJob: Job? = null
-    private var reconnectJob: Job? = null
-    private var previousConnectionStatus = false
+
+    // Separate previous status tracking for BLE and WiFi
+    private var previousBleConnectionStatus = false
+    private var previousWifiConnectionStatus = false
 
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
@@ -136,24 +142,33 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             bleService.connectionStatus.collect { status ->
+                _bleConnectionStatus.value = status
                 // 检测连接断开事件
-                if (previousConnectionStatus && !status.isConnected) {
-                    // 连接断开，触发自动重连
-                    onConnectionLost()
+                if (previousBleConnectionStatus && !status.isConnected) {
+                    // BLE 连接断开，触发自动重连
+                    if (_currentConnectionMode.value == ConnectionType.BLUETOOTH) {
+                        onConnectionLost()
+                    }
                 }
-                previousConnectionStatus = status.isConnected
-                _connectionStatus.value = status
+                previousBleConnectionStatus = status.isConnected
+                // Update main connection status based on current mode
+                updateMainConnectionStatus()
             }
         }
 
         viewModelScope.launch {
             wifiService.connectionStatus.collect { status ->
+                _wifiConnectionStatus.value = status
                 // 检测连接断开事件
-                if (previousConnectionStatus && !status.isConnected) {
-                    onConnectionLost()
+                if (previousWifiConnectionStatus && !status.isConnected) {
+                    // WiFi 连接断开
+                    if (_currentConnectionMode.value != ConnectionType.BLUETOOTH) {
+                        onConnectionLost()
+                    }
                 }
-                previousConnectionStatus = status.isConnected
-                _connectionStatus.value = status
+                previousWifiConnectionStatus = status.isConnected
+                // Update main connection status based on current mode
+                updateMainConnectionStatus()
             }
         }
 
@@ -172,8 +187,26 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
                 data?.let { onUserDataReceived(it) }
             }
         }
+
+        // Listen for connection mode changes to update status display
+        viewModelScope.launch {
+            _currentConnectionMode.collect {
+                updateMainConnectionStatus()
+            }
+        }
     }
-    
+
+    /**
+     * Update main connection status based on current connection mode
+     */
+    private fun updateMainConnectionStatus() {
+        _connectionStatus.value = when (_currentConnectionMode.value) {
+            ConnectionType.BLUETOOTH -> _bleConnectionStatus.value
+            ConnectionType.WIFI_AP, ConnectionType.WIFI_LAN -> _wifiConnectionStatus.value
+            ConnectionType.USB -> ConnectionStatus()
+        }
+    }
+
     private suspend fun loadButtonConfigs() {
         val configs = defaultButtonConfigs.map { config ->
             val isEnabled = settingsRepository.getButtonEnabled(config.id).first()
@@ -331,11 +364,21 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     }
     
     fun connectToDevice(deviceAddress: String) {
-        val device = bondedDevices.find { it.address == deviceAddress }
-            ?: scannedDevices.value.find { it.address == deviceAddress }
+        viewModelScope.launch {
+            // 先尝试从已配对设备列表获取
+            var device = bondedDevices.find { it.address == deviceAddress }
 
-        device?.let {
-            viewModelScope.launch {
+            // 如果不在已配对列表中，从扫描列表获取
+            if (device == null) {
+                device = scannedDevices.value.find { it.address == deviceAddress }
+            }
+
+            // 如果还不在，直接通过地址获取
+            if (device == null) {
+                device = bleService.getDeviceByAddress(deviceAddress)
+            }
+
+            device?.let {
                 // 保存最后连接的设备地址
                 val newSettings = _settings.value.copy(lastConnectedDeviceAddress = deviceAddress)
                 settingsRepository.updateAppSettings(newSettings)
@@ -345,14 +388,14 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
                     bleService.setAutoReconnect(true)
                 }
 
-                bleService.connect(device)
+                bleService.connect(it)
+            } ?: run {
+                addDebugMessage(DebugLevel.ERROR, "Connection", "未找到设备: $deviceAddress")
             }
         }
     }
     
     fun disconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
         stopSending()
 
         when (_currentConnectionMode.value) {
@@ -368,67 +411,9 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
             stopSending()
         }
 
-        // 检查是否启用自动重连
-        if (_settings.value.autoReconnect) {
-            val lastDeviceAddress = _settings.value.lastConnectedDeviceAddress
-            if (lastDeviceAddress != null) {
-                startReconnect(lastDeviceAddress)
-            }
-        }
-    }
-
-    private fun startReconnect(deviceAddress: String) {
-        // 取消之前的重连任务
-        reconnectJob?.cancel()
-
-        reconnectJob = viewModelScope.launch {
-            // 等待2秒后再尝试重连，避免频繁重连
-            delay(2000)
-
-            // 获取已配对设备列表
-            val device = bondedDevices.find { it.address == deviceAddress }
-                ?: bleService.scannedDevices.value.find { it.address == deviceAddress }
-
-            if (device != null) {
-                // 最多重连5次
-                var reconnectAttempts = 0
-                val maxReconnectAttempts = 5
-
-                while (reconnectAttempts < maxReconnectAttempts && !_connectionStatus.value.isConnected) {
-                    reconnectAttempts++
-                    addDebugMessage(
-                        DebugLevel.INFO,
-                        "AutoReconnect",
-                        "正在重连 (尝试 $reconnectAttempts/$maxReconnectAttempts)..."
-                    )
-
-                    val success = bleService.connect(device)
-                    if (success) {
-                        addDebugMessage(DebugLevel.INFO, "AutoReconnect", "重连成功!")
-                        break
-                    }
-
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        // 等待3秒后再试
-                        delay(3000)
-                    }
-                }
-
-                if (!_connectionStatus.value.isConnected) {
-                    addDebugMessage(
-                        DebugLevel.WARNING,
-                        "AutoReconnect",
-                        "重连失败，请手动重新连接"
-                    )
-                }
-            } else {
-                addDebugMessage(
-                    DebugLevel.WARNING,
-                    "AutoReconnect",
-                    "未找到之前连接的设备: $deviceAddress"
-                )
-            }
-        }
+        // 自动重连现在由 BleService 内部处理
+        // 这里只记录日志
+        addDebugMessage(DebugLevel.INFO, "Connection", "连接已断开")
     }
 
     private fun addDebugMessage(level: DebugLevel, tag: String, message: String) {

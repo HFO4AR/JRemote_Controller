@@ -28,11 +28,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.outlined.Router
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.Router
 import androidx.compose.material.icons.outlined.Wifi
@@ -94,7 +96,8 @@ fun ConnectionScreen(
     onConnectWifiDevice: (DiscoveredDevice) -> Unit,
     onSetConnectionMode: (ConnectionType) -> Unit,
     onConfigWifi: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -213,6 +216,21 @@ fun ConnectionScreen(
                     }
                 },
                 actions = {
+                    // 刷新按钮 - 未连接时显示
+                    if (!isConnected) {
+                        IconButton(
+                            onClick = {
+                                // 先停止当前扫描，再刷新
+                                onStopScan()
+                                onRefresh()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "刷新"
+                            )
+                        }
+                    }
                     if (isConnected) {
                         FilledTonalButton(
                             onClick = onDisconnect,
