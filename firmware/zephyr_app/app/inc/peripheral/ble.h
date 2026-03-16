@@ -58,6 +58,9 @@ public:
 	void OnMtuExchanged(struct bt_conn* conn);
 	void OnCccChanged(uint16_t value);
 
+	// 请求广播重启（供回调设置，线程执行）
+	void RequestRestartAdvertising();
+
 	// 静态实例指针（供回调使用）
 	static Ble* instance_;
 
@@ -74,6 +77,8 @@ private:
 	bool initialized_;
 	bool connected_;
 	bool subscribed_;
+	bool restart_advertising_;
+	struct k_mutex restart_mutex_;
 	struct bt_conn* conn_;
 	uint16_t mtu_;
 

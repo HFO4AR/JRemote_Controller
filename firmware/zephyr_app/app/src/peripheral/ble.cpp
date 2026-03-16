@@ -37,6 +37,7 @@ static void OnDisconnectedCallback(struct bt_conn* conn, uint8_t reason) {
 	if (Ble::instance_) {
 		Ble::instance_->OnDisconnected(conn);
 	}
+
 }
 
 // MTU 协商回调
@@ -98,8 +99,10 @@ BT_GATT_SERVICE_DEFINE(ble_gatt_service,
 
 Ble::Ble(k_thread_stack_t* stack, size_t stack_size)
 	: stack_(stack), stack_size_(stack_size),
-	  initialized_(false), connected_(false), subscribed_(false), conn_(nullptr),
+	  initialized_(false), connected_(false), subscribed_(false),
+	  restart_advertising_(false), conn_(nullptr),
 	  mtu_(23), data_handler_(nullptr) {
+	k_mutex_init(&restart_mutex_);
 }
 
 Ble::~Ble() {
@@ -140,6 +143,12 @@ int Ble::StartAdvertising() {
 	if (!initialized_) {
 		LOG_ERR("蓝牙未初始化");
 		return -1;
+	}
+
+	// 先停止之前的广播（防止 EALREADY 错误）
+	err = bt_le_adv_stop();
+	if (err && err != -EALREADY) {
+		LOG_WRN("停止广播失败 (err %d)", err);
 	}
 
 	// 广播数据：标志和完整服务 UUID
@@ -222,8 +231,15 @@ void Ble::OnDisconnected(struct bt_conn* conn) {
 		conn_ = nullptr;
 	}
 
-	// 重新开始广播
-	StartAdvertising();
+	// 请求线程重启广播
+	LOG_INF("请求重启广播");
+	RequestRestartAdvertising();
+}
+
+void Ble::RequestRestartAdvertising() {
+	k_mutex_lock(&restart_mutex_, K_FOREVER);
+	restart_advertising_ = true;
+	k_mutex_unlock(&restart_mutex_);
 }
 
 void Ble::OnCccChanged(uint16_t value) {
@@ -266,7 +282,27 @@ void Ble::ThreadEntry(void* p1, void* p2, void* p3) {
 
 	// 线程主循环
 	while (true) {
-		// BLE 处理 - 可在此添加周期性任务
+		// 检查是否需要重启广播
+		k_mutex_lock(&self->restart_mutex_, K_FOREVER);
+		bool need_restart = self->restart_advertising_;
+		if (need_restart) {
+			self->restart_advertising_ = false;
+		}
+		k_mutex_unlock(&self->restart_mutex_);
+
+		if (need_restart) {
+			// 延迟一段时间让 BLE 栈清理状态
+			k_msleep(500);
+			int err = self->StartAdvertising();
+			if (err == 0) {
+				LOG_INF("广播重启成功");
+			} else {
+				LOG_ERR("广播重启失败 (err %d)，将再次请求重启", err);
+				// 再次请求重启
+				self->RequestRestartAdvertising();
+			}
+		}
+
 		k_msleep(100);
 	}
 }
