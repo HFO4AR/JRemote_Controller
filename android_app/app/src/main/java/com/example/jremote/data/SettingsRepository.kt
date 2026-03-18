@@ -28,6 +28,11 @@ class SettingsRepository(private val context: Context) {
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val LAST_CONNECTION_MODE = stringPreferencesKey("last_connection_mode")
         val LAST_CONNECTED_DEVICE_IP = stringPreferencesKey("last_connected_device_ip")
+        // 摇杆自动回中设置
+        val JOYSTICK_LEFT_X_AUTO_RETURN = booleanPreferencesKey("joystick_left_x_auto_return")
+        val JOYSTICK_LEFT_Y_AUTO_RETURN = booleanPreferencesKey("joystick_left_y_auto_return")
+        val JOYSTICK_RIGHT_X_AUTO_RETURN = booleanPreferencesKey("joystick_right_x_auto_return")
+        val JOYSTICK_RIGHT_Y_AUTO_RETURN = booleanPreferencesKey("joystick_right_y_auto_return")
     }
     
     private object ButtonKeys {
@@ -62,7 +67,13 @@ class SettingsRepository(private val context: Context) {
             },
             dynamicColor = prefs[Keys.DYNAMIC_COLOR] ?: false,
             lastConnectionMode = lastConnectionMode,
-            lastConnectedDeviceIp = lastConnectedDeviceIp
+            lastConnectedDeviceIp = lastConnectedDeviceIp,
+            joystickAutoReturn = JoystickAutoReturn(
+                leftX = prefs[Keys.JOYSTICK_LEFT_X_AUTO_RETURN] ?: true,
+                leftY = prefs[Keys.JOYSTICK_LEFT_Y_AUTO_RETURN] ?: true,
+                rightX = prefs[Keys.JOYSTICK_RIGHT_X_AUTO_RETURN] ?: true,
+                rightY = prefs[Keys.JOYSTICK_RIGHT_Y_AUTO_RETURN] ?: true
+            )
         )
     }
     
@@ -82,6 +93,11 @@ class SettingsRepository(private val context: Context) {
             settings.lastConnectedDeviceIp?.let {
                 prefs[Keys.LAST_CONNECTED_DEVICE_IP] = it
             }
+            // 摇杆自动回中设置
+            prefs[Keys.JOYSTICK_LEFT_X_AUTO_RETURN] = settings.joystickAutoReturn.leftX
+            prefs[Keys.JOYSTICK_LEFT_Y_AUTO_RETURN] = settings.joystickAutoReturn.leftY
+            prefs[Keys.JOYSTICK_RIGHT_X_AUTO_RETURN] = settings.joystickAutoReturn.rightX
+            prefs[Keys.JOYSTICK_RIGHT_Y_AUTO_RETURN] = settings.joystickAutoReturn.rightY
         }
     }
     

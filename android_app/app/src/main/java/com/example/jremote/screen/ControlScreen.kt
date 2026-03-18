@@ -80,6 +80,7 @@ import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.FrameFormat
+import com.example.jremote.data.JoystickAutoReturn
 import com.example.jremote.data.JoystickState
 import com.example.jremote.data.ToggleButtonLayout
 import java.io.File
@@ -101,6 +102,7 @@ fun ControlScreen(
     showDebugPanel: Boolean,
     toggleButtonLayout: ToggleButtonLayout,
     hapticFeedback: Boolean,
+    joystickAutoReturn: JoystickAutoReturn,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -165,6 +167,7 @@ fun ControlScreen(
             showDebugPanel = showDebugPanel,
             toggleButtonLayout = toggleButtonLayout,
             hapticFeedback = hapticFeedback,
+            joystickAutoReturn = joystickAutoReturn,
             rssi = rssi,
             latency = latency,
             onLeftJoystickChange = onLeftJoystickChange,
@@ -449,6 +452,7 @@ private fun LandscapeControlScreen(
     showDebugPanel: Boolean,
     toggleButtonLayout: ToggleButtonLayout,
     hapticFeedback: Boolean,
+    joystickAutoReturn: JoystickAutoReturn,
     rssi: Int?,
     latency: Int?,
     onLeftJoystickChange: (JoystickState) -> Unit,
@@ -563,6 +567,8 @@ private fun LandscapeControlScreen(
                     ) {
                         Joystick(
                             size = 120.dp,
+                            autoReturnX = joystickAutoReturn.leftX,
+                            autoReturnY = joystickAutoReturn.leftY,
                             onStateChanged = onLeftJoystickChange
                         )
                         // LX: 角度330°（右上）x=87, y=-50
@@ -611,6 +617,8 @@ private fun LandscapeControlScreen(
                 } else {
                     Joystick(
                         size = 120.dp,
+                        autoReturnX = joystickAutoReturn.leftX,
+                        autoReturnY = joystickAutoReturn.leftY,
                         onStateChanged = onLeftJoystickChange
                     )
                 }
@@ -746,6 +754,8 @@ private fun LandscapeControlScreen(
                     ) {
                         Joystick(
                             size = 120.dp,
+                            autoReturnX = joystickAutoReturn.rightX,
+                            autoReturnY = joystickAutoReturn.rightY,
                             onStateChanged = onRightJoystickChange
                         )
                         // RX: 角度150°（左下）x=-87, y=-50
@@ -794,6 +804,8 @@ private fun LandscapeControlScreen(
                 } else {
                     Joystick(
                         size = 120.dp,
+                        autoReturnX = joystickAutoReturn.rightX,
+                        autoReturnY = joystickAutoReturn.rightY,
                         onStateChanged = onRightJoystickChange
                     )
                 }

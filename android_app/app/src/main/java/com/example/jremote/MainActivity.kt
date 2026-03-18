@@ -87,6 +87,7 @@ fun AppNavigation(
                 showDebugPanel = settings.showDebugPanel,
                 toggleButtonLayout = settings.toggleButtonLayout,
                 hapticFeedback = settings.hapticFeedback,
+                joystickAutoReturn = settings.joystickAutoReturn,
                 frameFormat = settings.frameFormat,
                 rssi = rssi,
                 latency = latency,

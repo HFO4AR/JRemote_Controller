@@ -32,9 +32,12 @@ fun Joystick(
     size: Dp = 150.dp,
     knobRatio: Float = 0.4f,
     deadZone: Float = 0.1f,
+    autoReturnX: Boolean = true,  // X 轴自动回中
+    autoReturnY: Boolean = true,  // Y 轴自动回中
     onStateChanged: (JoystickState) -> Unit = {}
 ) {
     var knobPosition by remember { mutableStateOf(Offset.Zero) }
+    var lastKnobPosition by remember { mutableStateOf(Offset.Zero) }
     var isPressed by remember { mutableStateOf(false) }
 
     val knobRadius = size * knobRatio / 2
@@ -60,6 +63,7 @@ fun Joystick(
                             deadZone = deadZone
                         ) { position, state ->
                             knobPosition = position
+                            lastKnobPosition = position
                             onStateChanged(state)
                         }
                     },
@@ -73,13 +77,24 @@ fun Joystick(
                             deadZone = deadZone
                         ) { position, state ->
                             knobPosition = position
+                            lastKnobPosition = position
                             onStateChanged(state)
                         }
                     },
                     onDragEnd = {
                         isPressed = false
-                        knobPosition = Offset.Zero
-                        onStateChanged(JoystickState())
+                        // 根据自动回中设置决定如何复位
+                        val newX = if (autoReturnX) Offset.Zero.x else lastKnobPosition.x
+                        val newY = if (autoReturnY) Offset.Zero.y else lastKnobPosition.y
+                        knobPosition = Offset(newX, newY)
+                        // 构建回中后的状态
+                        val finalState = JoystickState(
+                            x = if (autoReturnX) 0f else (lastKnobPosition.x / outerRadius.toPx()),
+                            y = if (autoReturnY) 0f else (-lastKnobPosition.y / outerRadius.toPx()),
+                            angle = 0f,
+                            distance = if (autoReturnX && autoReturnY) 0f else lastKnobPosition.getDistance() / outerRadius.toPx()
+                        )
+                        onStateChanged(finalState)
                     }
                 )
             }
