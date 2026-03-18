@@ -79,6 +79,7 @@ import com.example.jremote.data.ButtonConfig
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.DebugLevel
 import com.example.jremote.data.DebugMessage
+import com.example.jremote.data.FrameFormat
 import com.example.jremote.data.JoystickState
 import com.example.jremote.data.ToggleButtonLayout
 import java.io.File
@@ -110,7 +111,8 @@ fun ControlScreen(
     onStartSending: () -> Unit,
     onStopSending: () -> Unit,
     onEmergencyStop: () -> Unit,
-    onExitControlMode: () -> Unit
+    onExitControlMode: () -> Unit,
+    frameFormat: FrameFormat,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -172,7 +174,8 @@ fun ControlScreen(
             onConnectionClick = onConnectionClick,
             onStartSending = onStartSending,
             onStopSending = onExitControlMode,
-            onEmergencyStop = onEmergencyStop
+            onEmergencyStop = onEmergencyStop,
+            frameFormat = frameFormat
         )
     }
 }
@@ -455,7 +458,8 @@ private fun LandscapeControlScreen(
     onConnectionClick: () -> Unit,
     onStartSending: () -> Unit,
     onStopSending: () -> Unit,
-    onEmergencyStop: () -> Unit
+    onEmergencyStop: () -> Unit,
+    frameFormat: FrameFormat,
 ) {
     Box(
         modifier = Modifier
@@ -551,56 +555,64 @@ private fun LandscapeControlScreen(
                 }
 
                 // 摇杆周围环绕3个按钮（LX、LY、LZ）- 在圆上，间距相等，偏向屏幕中心
-                Box(
-                    modifier = Modifier.size(260.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                // 最简帧（6字节，8按钮）模式下隐藏这些按钮
+                if (frameFormat != FrameFormat.MIN) {
+                    Box(
+                        modifier = Modifier.size(260.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Joystick(
+                            size = 120.dp,
+                            onStateChanged = onLeftJoystickChange
+                        )
+                        // LX: 角度330°（右上）x=87, y=-50
+                        buttonConfigs.getOrNull(0)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = 87.dp, y = (-50).dp)
+                            )
+                        }
+                        // LY: 角度0°（正右）x=100, y=0
+                        buttonConfigs.getOrNull(1)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = 100.dp, y = 0.dp)
+                            )
+                        }
+                        // LZ: 角度30°（右下）x=87, y=50
+                        buttonConfigs.getOrNull(2)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = 87.dp, y = 50.dp)
+                            )
+                        }
+                    }
+                } else {
                     Joystick(
                         size = 120.dp,
                         onStateChanged = onLeftJoystickChange
                     )
-                    // LX: 角度330°（右上）x=87, y=-50
-                    buttonConfigs.getOrNull(0)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = 87.dp, y = (-50).dp)
-                        )
-                    }
-                    // LY: 角度0°（正右）x=100, y=0
-                    buttonConfigs.getOrNull(1)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = 100.dp, y = 0.dp)
-                        )
-                    }
-                    // LZ: 角度30°（右下）x=87, y=50
-                    buttonConfigs.getOrNull(2)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = 87.dp, y = 50.dp)
-                        )
-                    }
                 }
 
                 JoystickInfoPanel(
@@ -726,56 +738,64 @@ private fun LandscapeControlScreen(
                 }
 
                 // 摇杆周围环绕3个按钮（RX、RY、RZ）- 在圆上，间距相等，偏向屏幕中心
-                Box(
-                    modifier = Modifier.size(260.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                // 最简帧（6字节，8按钮）模式下隐藏这些按钮
+                if (frameFormat != FrameFormat.MIN) {
+                    Box(
+                        modifier = Modifier.size(260.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Joystick(
+                            size = 120.dp,
+                            onStateChanged = onRightJoystickChange
+                        )
+                        // RX: 角度150°（左下）x=-87, y=-50
+                        buttonConfigs.getOrNull(3)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = (-87).dp, y = (-50).dp)
+                            )
+                        }
+                        // RY: 角度180°（正左）x=-100, y=0
+                        buttonConfigs.getOrNull(4)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = (-100).dp, y = 0.dp)
+                            )
+                        }
+                        // RZ: 角度210°（左上）x=-87, y=50
+                        buttonConfigs.getOrNull(5)?.let { config ->
+                            ControlButton(
+                                config = config,
+                                isPressed = buttonStates[config.id] ?: false,
+                                isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
+                                size = 45.dp,
+                                hapticFeedbackEnabled = hapticFeedback,
+                                onPressed = { pressed -> onButtonPressed(config.id, pressed) },
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .offset(x = (-87).dp, y = (50).dp)
+                            )
+                        }
+                    }
+                } else {
                     Joystick(
                         size = 120.dp,
                         onStateChanged = onRightJoystickChange
                     )
-                    // RX: 角度150°（左下）x=-87, y=-50
-                    buttonConfigs.getOrNull(3)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = (-87).dp, y = (-50).dp)
-                        )
-                    }
-                    // RY: 角度180°（正左）x=-100, y=0
-                    buttonConfigs.getOrNull(4)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = (-100).dp, y = 0.dp)
-                        )
-                    }
-                    // RZ: 角度210°（左上）x=-87, y=50
-                    buttonConfigs.getOrNull(5)?.let { config ->
-                        ControlButton(
-                            config = config,
-                            isPressed = buttonStates[config.id] ?: false,
-                            isToggled = if (config.isToggle) buttonStates[config.id] ?: false else false,
-                            size = 45.dp,
-                            hapticFeedbackEnabled = hapticFeedback,
-                            onPressed = { pressed -> onButtonPressed(config.id, pressed) },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(x = (-87).dp, y = (50).dp)
-                        )
-                    }
                 }
 
                 JoystickInfoPanel(

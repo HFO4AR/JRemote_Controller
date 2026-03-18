@@ -121,6 +121,7 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     val bondedDevices = bleService.getBondedDevices()
     val scannedDevices = bleService.scannedDevices
     val isScanning = bleService.isScanning
+    val isBleConnecting = bleService.isConnecting
 
     private val _currentConnectionMode = MutableStateFlow(ConnectionType.BLUETOOTH)
     val currentConnectionMode: StateFlow<ConnectionType> = _currentConnectionMode.asStateFlow()

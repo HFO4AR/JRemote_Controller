@@ -87,6 +87,7 @@ fun AppNavigation(
                 showDebugPanel = settings.showDebugPanel,
                 toggleButtonLayout = settings.toggleButtonLayout,
                 hapticFeedback = settings.hapticFeedback,
+                frameFormat = settings.frameFormat,
                 rssi = rssi,
                 latency = latency,
                 onLeftJoystickChange = { viewModel.updateLeftJoystick(it) },
@@ -104,6 +105,7 @@ fun AppNavigation(
         composable(Screen.Connection.route) {
             val scannedDevices by viewModel.scannedDevices.collectAsState()
             val isScanning by viewModel.isScanning.collectAsState()
+            val isBleConnecting by viewModel.isBleConnecting.collectAsState()
             val currentConnectionMode by viewModel.currentConnectionMode.collectAsState()
             val wifiScannedDevices by viewModel.wifiScannedDevices.collectAsState()
             val isWifiScanning by viewModel.isWifiScanning.collectAsState()
@@ -112,6 +114,7 @@ fun AppNavigation(
                 bondedDevices = viewModel.bondedDevices,
                 scannedDevices = scannedDevices,
                 isScanning = isScanning,
+                isBleConnecting = isBleConnecting,
                 isConnected = connectionStatus.isConnected,
                 connectedDeviceName = connectionStatus.deviceName,
                 currentConnectionMode = currentConnectionMode,

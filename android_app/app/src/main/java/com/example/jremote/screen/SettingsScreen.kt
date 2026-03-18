@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jremote.data.AppSettings
 import com.example.jremote.data.ButtonConfig
+import com.example.jremote.data.FrameFormat
 import com.example.jremote.data.ToggleButtonLayout
 
 @Composable
@@ -142,6 +143,59 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
+                    }
+                }
+            }
+
+            item {
+                SettingsSection(title = "帧格式")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "选择帧格式",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "决定发送数据的格式和精度",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FrameFormatButton(
+                                title = "最简",
+                                subtitle = "6字节",
+                                description = "8按钮",
+                                isSelected = settings.frameFormat == FrameFormat.MIN,
+                                onClick = { onUpdateSettings(settings.copy(frameFormat = FrameFormat.MIN)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FrameFormatButton(
+                                title = "标准",
+                                subtitle = "9字节",
+                                description = "32按钮",
+                                isSelected = settings.frameFormat == FrameFormat.STANDARD,
+                                onClick = { onUpdateSettings(settings.copy(frameFormat = FrameFormat.STANDARD)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FrameFormatButton(
+                                title = "16位",
+                                subtitle = "17字节",
+                                description = "高精度",
+                                isSelected = settings.frameFormat == FrameFormat.BIT16,
+                                onClick = { onUpdateSettings(settings.copy(frameFormat = FrameFormat.BIT16)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -373,6 +427,54 @@ private fun SettingSwitch(
                 uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
+    }
+}
+
+@Composable
+private fun FrameFormatButton(
+    title: String,
+    subtitle: String,
+    description: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(8.dp),
+        border = if (!isSelected)
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
+            Text(
+                text = description,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp
+            )
+        }
     }
 }
 

@@ -63,9 +63,6 @@ class BleService(private val context: Context) {
     @Volatile
     private var isConnected = false
 
-    @Volatile
-    private var isConnecting = false
-
     private var currentDevice: BluetoothDevice? = null
     private var currentDeviceAddress: String? = null
 
@@ -105,6 +102,9 @@ class BleService(private val context: Context) {
 
     private val _latency = MutableStateFlow<Int?>(null)
     val latency: StateFlow<Int?> = _latency.asStateFlow()
+
+    private val _isConnecting = MutableStateFlow(false)
+    val isConnecting: StateFlow<Boolean> = _isConnecting.asStateFlow()
 
     private var scanCallback: ScanCallback? = null
     private var lastPingTime: Long = 0
@@ -228,7 +228,7 @@ class BleService(private val context: Context) {
 
     private fun handleDisconnection(status: Int) {
         isConnected = false
-        isConnecting = false
+        _isConnecting.value = false
 
         val wasAutoReconnectEnabled = autoReconnectEnabled
         val lastDeviceAddress = currentDeviceAddress
@@ -261,7 +261,7 @@ class BleService(private val context: Context) {
 
     private fun onConnectionEstablished() {
         isConnected = true
-        isConnecting = false
+        _isConnecting.value = false
         reconnectAttempts = 0
 
         currentDevice?.let { device ->
@@ -448,7 +448,7 @@ class BleService(private val context: Context) {
             return@withContext false
         }
 
-        if (isConnecting) {
+        if (_isConnecting.value) {
             log(DebugLevel.WARNING, TAG, "正在连接中...")
             return@withContext false
         }
@@ -467,7 +467,7 @@ class BleService(private val context: Context) {
         }
 
         try {
-            isConnecting = true
+            _isConnecting.value = true
             currentDevice = device
             currentDeviceAddress = device.address
 
@@ -497,23 +497,52 @@ class BleService(private val context: Context) {
             if (isConnected) {
                 log(DebugLevel.INFO, TAG, "连接成功")
                 reconnectAttempts = 0
+                _isConnecting.value = false
                 true
             } else {
-                log(DebugLevel.ERROR, TAG, "连接超时或失败")
-                isConnecting = false
-                disconnect()
+                log(DebugLevel.WARNING, TAG, "连接超时")
+                // Clean up GATT resources properly
+                cleanupGatt()
+                _isConnecting.value = false
                 false
             }
         } catch (e: SecurityException) {
             log(DebugLevel.ERROR, TAG, "安全异常: ${e.message}")
-            isConnecting = false
+            cleanupGatt()
+            _isConnecting.value = false
             false
         } catch (e: Exception) {
             log(DebugLevel.ERROR, TAG, "连接异常: ${e.message}")
-            isConnecting = false
-            disconnect()
+            cleanupGatt()
+            _isConnecting.value = false
             false
         }
+    }
+
+    /**
+     * Clean up GATT resources without triggering callbacks
+     */
+    private fun cleanupGatt() {
+        try {
+            bluetoothGatt?.let { gatt ->
+                try {
+                    gatt.disconnect()
+                } catch (e: Exception) {
+                    // Ignore disconnect errors during cleanup
+                }
+                try {
+                    gatt.close()
+                } catch (e: Exception) {
+                    // Ignore close errors during cleanup
+                }
+            }
+        } catch (e: Exception) {
+            log(DebugLevel.WARNING, TAG, "清理 GATT 时出错: ${e.message}")
+        }
+        bluetoothGatt = null
+        txCharacteristic = null
+        rxCharacteristic = null
+        negotiatedMtu = 20
     }
 
     fun sendData(data: ByteArray): Boolean {
@@ -563,7 +592,7 @@ class BleService(private val context: Context) {
         txCharacteristic = null
         rxCharacteristic = null
         isConnected = false
-        isConnecting = false
+        _isConnecting.value = false
         currentDevice = null
         negotiatedMtu = 20
 

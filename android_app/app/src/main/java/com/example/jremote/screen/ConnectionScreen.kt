@@ -81,6 +81,7 @@ fun ConnectionScreen(
     bondedDevices: List<BluetoothDevice>,
     scannedDevices: List<BluetoothDevice>,
     isScanning: Boolean,
+    isBleConnecting: Boolean,
     isConnected: Boolean,
     connectedDeviceName: String,
     currentConnectionMode: ConnectionType,
@@ -126,8 +127,11 @@ fun ConnectionScreen(
     }
 
     // 连接成功或失败后清除连接状态
-    LaunchedEffect(isConnected) {
+    LaunchedEffect(isConnected, isBleConnecting) {
         if (isConnected) {
+            connectingAddress = null
+        } else if (!isBleConnecting && connectingAddress != null) {
+            // 连接失败时清除连接状态
             connectingAddress = null
         }
     }
@@ -389,6 +393,7 @@ fun ConnectionScreen(
                         BleDeviceList(
                             scannedDevices = scannedDevices,
                             isScanning = isScanning,
+                            isBleConnecting = isBleConnecting,
                             isConnected = isConnected,
                             connectedDeviceName = connectedDeviceName,
                             connectingAddress = connectingAddress,
@@ -434,6 +439,7 @@ fun ConnectionScreen(
 private fun BleDeviceList(
     scannedDevices: List<BluetoothDevice>,
     isScanning: Boolean,
+    isBleConnecting: Boolean,
     isConnected: Boolean,
     connectedDeviceName: String,
     connectingAddress: String?,
@@ -442,6 +448,7 @@ private fun BleDeviceList(
     if (scannedDevices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
+            isConnecting = isBleConnecting,
             isConnected = isConnected
         )
     } else {
@@ -454,7 +461,7 @@ private fun BleDeviceList(
                 items = scannedDevices,
                 key = { it.address }
             ) { device ->
-                val isThisDeviceConnecting = connectingAddress == device.address
+                val isThisDeviceConnecting = isBleConnecting && connectingAddress == device.address
                 val isThisDeviceConnected = isConnected && connectedDeviceName == (device.name ?: "Unknown")
                 val isBonded = device.bondState == BluetoothDevice.BOND_BONDED
 
@@ -487,6 +494,7 @@ private fun WifiDeviceList(
     if (devices.isEmpty()) {
         EmptyDeviceList(
             isScanning = isScanning,
+            isConnecting = false,  // WiFi doesn't use BLE connecting state
             isConnected = isConnected
         )
     } else {
@@ -520,6 +528,7 @@ private fun WifiDeviceList(
 @Composable
 private fun EmptyDeviceList(
     isScanning: Boolean,
+    isConnecting: Boolean,
     isConnected: Boolean
 ) {
     Box(
@@ -527,36 +536,51 @@ private fun EmptyDeviceList(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (isScanning) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "正在扫描设备...",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "未发现设备",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "切换模式重新扫描",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+            when {
+                isConnecting -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "正在连接...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                isScanning -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "正在扫描设备...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                else -> {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "未发现设备",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "切换模式重新扫描",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
