@@ -10,12 +10,12 @@
 // 标准帧长度
 constexpr size_t kControlDataMinLen = 6;    // 最简帧: 帧头(1) + 摇杆(4) + 按钮(1)
 constexpr size_t kControlDataLen = 9;        // 标准帧: 帧头(1) + 摇杆(4) + 按钮(4)
-constexpr size_t kControlData16Len = 17;      // 16位帧: 帧头(1) + 摇杆(8) + 按钮(4)
+constexpr size_t kControlData16Len = 13;      // 16位帧: 帧头(1) + 摇杆(8) + 按钮(4)
 
 // 多节点帧长度（比标准帧多1字节路由ID）
-constexpr size_t kControlDataMinMultiLen = 10;   // 多节点最简: 10字节
-constexpr size_t kControlDataMultiLen = 11;      // 多节点标准: 11字节
-constexpr size_t kControlData16MultiLen = 19;    // 多节点16位: 19字节
+constexpr size_t kControlDataMinMultiLen = 7;    // 多节点最简: 7字节 (6+1路由)
+constexpr size_t kControlDataMultiLen = 10;       // 多节点标准: 10字节 (9+1路由)
+constexpr size_t kControlData16MultiLen = 14;    // 多节点16位: 14字节 (13+1路由)
 
 // ============================================================
 // 帧类型定义（手机 ↔ ESP32）

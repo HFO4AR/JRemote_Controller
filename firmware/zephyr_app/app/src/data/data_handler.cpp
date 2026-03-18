@@ -9,39 +9,106 @@ K_THREAD_STACK_DEFINE(data_handler_stack, 2048);
 
 // 控制数据回调（由 DataHandler 调用）
 void OnControlDataCallback(const uint8_t* data, uint16_t len, ConnectionType source) {
-	if (len < kControlDataLen) {
-		LOG_WRN("控制数据过短: %u", len);
+	uint8_t header = data[0];
+
+	// 检查急停指令
+	if (header == static_cast<uint8_t>(FrameType::kEmergency)) {
+		LOG_WRN("收到急停指令，来源: %u!", static_cast<uint8_t>(source));
+		// 急停处理已在 ControlDataHandler 中完成
 		return;
 	}
 
-	// 解析控制数据
-	ControlData control_data;
-	memcpy(&control_data, data, sizeof(ControlData));
-
-	if (control_data.header == static_cast<uint8_t>(FrameType::kEmergency)) {
-		LOG_WRN("收到急停指令，来源: %u!", static_cast<uint8_t>(source));
-		// TODO: 执行急停逻辑
-	} else {
-		LOG_DBG("控制数据: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
-				(int)control_data.left_x, (int)control_data.left_y,
-				(int)control_data.right_x, (int)control_data.right_y,
-				(unsigned int)control_data.buttons);
+	// 获取帧长度
+	size_t expected_len = GetFrameLength(static_cast<FrameType>(header));
+	if (expected_len == 0) {
+		LOG_WRN("未知帧头: 0x%02X", header);
+		return;
 	}
 
-	// 转发控制数据到 MCU（通过 UART）
-	g_serial.SendData(data, len);
+	if (len < expected_len) {
+		LOG_WRN("控制数据过短: %u, expected %zu", len, expected_len);
+		return;
+	}
+
+	// 判断是否为多节点帧（多节点帧有额外的路由字节）
+	bool is_multi_node = IsMultiNodeFrame(static_cast<FrameType>(header));
+	size_t data_offset = is_multi_node ? 2 : 1;
+
+	if (len < data_offset + 5) {
+		LOG_WRN("数据长度不足: len=%u, offset=%zu", len, data_offset);
+		return;
+	}
+
+	// 根据帧格式解析并日志输出
+	// 注意：Android 发送的是无符号值 (0~255 或 0~65535)，需要转换回有符号值显示
+	switch (static_cast<FrameType>(header)) {
+		case FrameType::kControlDataMin:
+		case FrameType::kControlDataMinMulti: {
+			// 6/10字节最简帧: 帧头(+路由) + 4摇杆(uint8) + 1按钮
+			int8_t lx = static_cast<int8_t>(data[data_offset] - 128);
+			int8_t ly = static_cast<int8_t>(data[data_offset + 1] - 128);
+			int8_t rx = static_cast<int8_t>(data[data_offset + 2] - 128);
+			int8_t ry = static_cast<int8_t>(data[data_offset + 3] - 128);
+			uint8_t bt = data[data_offset + 4];
+			LOG_DBG("MIN帧: L=(%d,%d) R=(%d,%d) buttons=0x%02X",
+					lx, ly, rx, ry, bt);
+			break;
+		}
+		case FrameType::kControlData:
+		case FrameType::kControlDataMulti: {
+			// 9/11字节标准帧: 帧头(+路由) + 4摇杆(uint8) + 4按钮
+			int8_t lx = static_cast<int8_t>(data[data_offset] - 128);
+			int8_t ly = static_cast<int8_t>(data[data_offset + 1] - 128);
+			int8_t rx = static_cast<int8_t>(data[data_offset + 2] - 128);
+			int8_t ry = static_cast<int8_t>(data[data_offset + 3] - 128);
+			uint32_t bt = data[data_offset + 4] |
+						  (data[data_offset + 5] << 8) |
+						  (data[data_offset + 6] << 16) |
+						  (data[data_offset + 7] << 24);
+			LOG_DBG("标准帧: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
+					lx, ly, rx, ry, bt);
+			break;
+		}
+		case FrameType::kControlData16:
+		case FrameType::kControlData16Multi: {
+			// 13/14字节16位帧: 帧头(+路由) + 4摇杆(uint16 big-endian) + 4按钮
+			uint16_t lx_raw = (static_cast<uint16_t>(data[data_offset]) << 8) | data[data_offset + 1];
+			uint16_t ly_raw = (static_cast<uint16_t>(data[data_offset + 2]) << 8) | data[data_offset + 3];
+			uint16_t rx_raw = (static_cast<uint16_t>(data[data_offset + 4]) << 8) | data[data_offset + 5];
+			uint16_t ry_raw = (static_cast<uint16_t>(data[data_offset + 6]) << 8) | data[data_offset + 7];
+			int16_t lx = static_cast<int16_t>(lx_raw) - 32768;
+			int16_t ly = static_cast<int16_t>(ly_raw) - 32768;
+			int16_t rx = static_cast<int16_t>(rx_raw) - 32768;
+			int16_t ry = static_cast<int16_t>(ry_raw) - 32768;
+			uint32_t bt = data[data_offset + 8] |
+						  (data[data_offset + 9] << 8) |
+						  (data[data_offset + 10] << 16) |
+						  (data[data_offset + 11] << 24);
+			LOG_DBG("16位帧: L=(%d,%d) R=(%d,%d) buttons=0x%08X",
+					lx, ly, rx, ry, bt);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 // 用户数据回调（由 DataHandler 调用）
 void OnUserDataCallback(const uint8_t* data, uint16_t len, ConnectionType source) {
 	LOG_INF("收到用户数据: %u 字节，来源: %u", len, static_cast<uint8_t>(source));
 
+	if (len == 0) return;
+
+	// 解析子类型（用户数据的第 1 字节是子类型）
+	uint8_t subtype = data[0];
+	LOG_INF("用户数据子类型: 0x%02X", subtype);
+
 	// 回传用户数据到 App（通过 BLE TX）
 	// 构造响应包：帧头 + 长度 + 数据
 	uint8_t response[2 + 255];
 	response[0] = static_cast<uint8_t>(FrameType::kUserData);
 	response[1] = static_cast<uint8_t>(len);
-	if (len > 0 && len <= 255) {
+	if (len <= 255) {
 		memcpy(&response[2], data, len);
 		g_ble.SendData(response, 2 + len);
 	}
@@ -130,50 +197,75 @@ void DataHandler::RouteMessage(const TransportMessage& msg) {
 
 	// 检查帧头
 	uint8_t frame_header = msg.data[0];
+	FrameType frame_type = static_cast<FrameType>(frame_header);
 
-	switch (static_cast<FrameType>(frame_header)) {
-		case FrameType::kControlData:
-		case FrameType::kEmergency:
-			// 控制数据：固定 9 字节
-			if (msg.length >= kControlDataLen) {
-				LOG_DBG("路由控制数据，来源: %u", msg.source);
+	// 首先判断是否为控制数据帧
+	if (IsControlFrame(frame_type)) {
+		// 控制数据帧
+		size_t expected_len = GetFrameLength(frame_type);
+		if (expected_len == 0) {
+			LOG_WRN("未知控制帧头: 0x%02X", frame_header);
+			return;
+		}
+
+		if (msg.length >= expected_len) {
+			LOG_DBG("路由控制数据: frame=0x%02X, len=%u, source=%u",
+					frame_header, msg.length, msg.source);
+
+			// 通过处理器处理（转换并转发到 UART）
+			control_handler_.ProcessData(msg.data, msg.length, source);
+
+			// 调用回调
+			if (control_callback_) {
+				control_callback_(msg.data, msg.length, source);
+			}
+		} else {
+			LOG_WRN("控制数据过短: len=%u, expected=%zu", msg.length, expected_len);
+		}
+		return;
+	}
+
+	// 判断是否为急停帧
+	if (IsEmergencyFrame(frame_type)) {
+		LOG_WRN("路由急停指令，来源: %u", msg.source);
+
+		// 通过处理器处理
+		control_handler_.ProcessData(msg.data, msg.length, source);
+
+		// 调用回调
+		if (control_callback_) {
+			control_callback_(msg.data, msg.length, source);
+		}
+		return;
+	}
+
+	// 判断是否为用户数据帧
+	if (frame_type == FrameType::kUserData || frame_type == FrameType::kUserDataMulti) {
+		// 用户数据：变长（帧头 + 长度 + 载荷）
+		if (msg.length >= 2) {
+			uint8_t payload_len = msg.data[1];
+			size_t expected_len = 2 + payload_len;
+
+			if (msg.length >= expected_len) {
+				LOG_DBG("路由用户数据: frame=0x%02X, payload_len=%u, source=%u",
+						frame_header, payload_len, msg.source);
 
 				// 通过处理器处理
-				control_handler_.ProcessData(msg.data, msg.length, source);
+				user_handler_.ProcessData(&msg.data[2], payload_len, source);
 
 				// 调用回调
-				if (control_callback_) {
-					control_callback_(msg.data, msg.length, source);
+				if (user_callback_) {
+					user_callback_(&msg.data[2], payload_len, source);
 				}
 			} else {
-				LOG_WRN("控制数据过短: %u", msg.length);
+				LOG_WRN("用户数据不完整: 期望 %zu 字节，实际 %u 字节", expected_len, msg.length);
 			}
-			break;
-
-		case FrameType::kUserData:
-			// 用户数据：变长（帧头 + 长度 + 载荷）
-			if (msg.length >= 2) {
-				uint8_t payload_len = msg.data[1];
-				size_t expected_len = 2 + payload_len;
-
-				if (msg.length >= expected_len) {
-					LOG_DBG("路由用户数据，来源: %u，长度: %u", msg.source, payload_len);
-
-					// 通过处理器处理
-					user_handler_.ProcessData(&msg.data[2], payload_len, source);
-
-					// 调用回调
-					if (user_callback_) {
-						user_callback_(&msg.data[2], payload_len, source);
-					}
-				} else {
-					LOG_WRN("用户数据不完整: 期望 %zu 字节，实际 %u 字节", expected_len, msg.length);
-				}
-			}
-			break;
-
-		default:
-			LOG_WRN("未知帧头: 0x%02X", frame_header);
-			break;
+		} else {
+			LOG_WRN("用户数据帧过短: %u", msg.length);
+		}
+		return;
 	}
+
+	// 未知帧头
+	LOG_WRN("未知帧头: 0x%02X，来源: %u", frame_header, msg.source);
 }

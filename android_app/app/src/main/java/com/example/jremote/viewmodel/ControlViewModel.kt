@@ -10,6 +10,8 @@ import com.example.jremote.data.ConnectionType
 import com.example.jremote.data.ConnectionStatus
 import com.example.jremote.data.ControlData
 import com.example.jremote.data.DebugLevel
+import com.example.jremote.data.FrameFormat
+import com.example.jremote.data.FrameType
 import com.example.jremote.data.DebugMessage
 import com.example.jremote.data.DiscoveredDevice
 import com.example.jremote.data.JoystickState
@@ -299,11 +301,12 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     
     fun stopSending() {
         val stopData = ControlData(
+            frameFormat = _settings.value.frameFormat,
             leftJoystick = JoystickState(0f, 0f),
             rightJoystick = JoystickState(0f, 0f),
             buttons = emptyMap()
         )
-        val data = byteArrayOf(0xAA.toByte()) + stopData.toByteArray()
+        val data = stopData.toByteArray()
 
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.sendData(data)
@@ -317,14 +320,9 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
         sendJob?.cancel()
         sendJob = null
     }
-    
+
     fun emergencyStop() {
-        val stopData = ControlData(
-            leftJoystick = JoystickState(0f, 0f),
-            rightJoystick = JoystickState(0f, 0f),
-            buttons = emptyMap()
-        )
-        val data = byteArrayOf(0xEE.toByte()) + stopData.toByteArray()
+        val data = byteArrayOf(FrameType.EMERGENCY)
 
         when (_currentConnectionMode.value) {
             ConnectionType.BLUETOOTH -> bleService.sendData(data)
@@ -348,12 +346,13 @@ class ControlViewModel(application: Application) : AndroidViewModel(application)
     
     private fun sendControlData() {
         val controlData = ControlData(
+            frameFormat = _settings.value.frameFormat,
             leftJoystick = _leftJoystickState.value,
             rightJoystick = _rightJoystickState.value,
             buttons = _buttonStates.value
         )
 
-        val data = byteArrayOf(0xAA.toByte()) + controlData.toByteArray()
+        val data = controlData.toByteArray()
 
         if (_connectionStatus.value.isConnected) {
             when (_currentConnectionMode.value) {
